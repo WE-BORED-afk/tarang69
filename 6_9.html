@@ -894,26 +894,24 @@
         <div id="dailySwipeArea" class="bg-white/95 backdrop-blur-md rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 touch-pan-y">
             <!-- ส่วนหัวการ์ด พร้อมปุ่มลูกศรเลื่อนวันก่อนหน้า-ถัดไป -->
             <div class="pb-3 border-b border-slate-100">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <button onclick="prevDay()" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 transition active:scale-90" title="วันก่อนหน้า">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                        <button onclick="prevDay()" class="p-1 sm:p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 transition active:scale-90 shrink-0" title="วันก่อนหน้า">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         </button>
-                        <div>
-                            <h2 id="dailyHeaderTitle" class="text-lg sm:text-xl font-bold text-slate-800">วันจันทร์</h2>
-                            <p id="dailyHeaderSub" class="text-xs text-slate-500 font-medium">Monday • Timeline คาบเรียน</p>
+                        <div class="min-w-0">
+                            <h2 id="dailyHeaderTitle" class="text-base sm:text-xl font-bold text-slate-800 truncate">วันจันทร์</h2>
+                            <p id="dailyHeaderSub" class="text-[11px] sm:text-xs text-slate-500 font-medium truncate">Monday • Timeline คาบเรียน</p>
                         </div>
-                        <button onclick="nextDay()" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 transition active:scale-90" title="วันถัดไป">
+                        <button onclick="nextDay()" class="p-1 sm:p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 transition active:scale-90 shrink-0" title="วันถัดไป">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         </button>
                     </div>
-                    <div class="flex items-center gap-1.5">
-                        <span id="dailyTodayBadge" class="hidden px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-2xs">
+                    <div class="flex items-center shrink-0">
+                        <span id="dailyTodayBadge" class="hidden whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-2xs">
                             วันนี้
                         </span>
-                        <span id="dailyProgressBadge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
-                            0/8 คาบ
-                        </span>
+                        <span id="dailyProgressBadge" class="hidden"></span>
                     </div>
                 </div>
 
