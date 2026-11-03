@@ -24,6 +24,14 @@
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
+
+        /* Hide Netlify Injected HUD & Badge */
+        #nl-badge-frame, #nl-hud-frame {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
         
         body {
             font-family: 'Kanit', 'Sarabun', sans-serif;
