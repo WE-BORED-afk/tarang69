@@ -437,12 +437,14 @@
             </div>
 
             <!-- สลับโหมดบนมือถือ -->
-            <div class="flex bg-slate-200/80 p-0.5 rounded-xl text-xs font-semibold no-print md:hidden">
-                <button id="mobileBtnTable" onclick="switchView('table')" class="px-2.5 py-1.5 rounded-lg transition text-slate-600">
-                    📊 ตาราง
+            <div class="flex items-center bg-slate-200/80 p-0.5 rounded-xl text-xs font-semibold no-print md:hidden">
+                <button id="mobileBtnTable" onclick="switchView('table')" class="flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg transition text-slate-600" title="มุมมองตาราง">
+                    <span class="text-sm">📊</span>
+                    <span class="hidden sm:inline">ตาราง</span>
                 </button>
-                <button id="mobileBtnDaily" onclick="switchView('daily')" class="px-2.5 py-1.5 rounded-lg transition bg-white text-indigo-700 shadow-xs">
-                    📱 รายวัน
+                <button id="mobileBtnDaily" onclick="switchView('daily')" class="flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg transition bg-white text-indigo-700 shadow-xs" title="มุมมองรายวัน">
+                    <span class="text-sm">📱</span>
+                    <span class="hidden sm:inline">รายวัน</span>
                 </button>
             </div>
         </div>
@@ -1196,8 +1198,8 @@
                 tableView.classList.add('hidden');
                 dailyView.classList.remove('hidden');
 
-                mBtnTable.className = "px-2.5 py-1.5 rounded-lg transition text-slate-600";
-                mBtnDaily.className = "px-2.5 py-1.5 rounded-lg transition bg-white text-indigo-700 shadow-xs";
+                mBtnTable.className = "flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg transition text-slate-600";
+                mBtnDaily.className = "flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg transition bg-white text-indigo-700 shadow-xs";
 
                 dBtnTable.className = "px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900";
                 dBtnDaily.className = "px-3 py-1.5 rounded-lg transition bg-indigo-600 text-white shadow-xs";
@@ -1208,8 +1210,8 @@
                 dailyView.classList.add('hidden');
                 tableView.classList.remove('hidden');
 
-                mBtnTable.className = "px-2.5 py-1.5 rounded-lg transition bg-white text-indigo-700 shadow-xs";
-                mBtnDaily.className = "px-2.5 py-1.5 rounded-lg transition text-slate-600";
+                mBtnTable.className = "flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg transition bg-white text-indigo-700 shadow-xs";
+                mBtnDaily.className = "flex items-center justify-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-lg transition text-slate-600";
 
                 dBtnTable.className = "px-3 py-1.5 rounded-lg transition bg-indigo-600 text-white shadow-xs";
                 dBtnDaily.className = "px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900";
