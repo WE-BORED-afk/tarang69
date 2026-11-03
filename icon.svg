@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Pastel Gradient Background -->
+    <linearGradient id="pastelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="50%" stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#f472b6"/>
+    </linearGradient>
+
+    <!-- Subtle Inner Glow -->
+    <linearGradient id="badgeGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Drop Shadow for Number 69 -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#312e81" flood-opacity="0.35"/>
+    </filter>
+    <filter id="calendarShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1e1b4b" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- Base Rounded Background -->
+  <rect width="512" height="512" rx="120" fill="url(#pastelGrad)"/>
+  <rect width="512" height="512" rx="120" fill="url(#badgeGlow)"/>
+
+  <!-- Middle Layer: Calendar Wireframe / Line Art -->
+  <g filter="url(#calendarShadow)" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round" opacity="0.88">
+    <!-- Calendar Body Outline -->
+    <rect x="96" y="112" width="320" height="300" rx="44" fill="none" stroke-width="14"/>
+    
+    <!-- Calendar Header Line -->
+    <line x1="96" y1="184" x2="416" y2="184" stroke-width="12"/>
+
+    <!-- Calendar Ring Binders -->
+    <line x1="176" y1="88" x2="176" y2="136" stroke-width="16"/>
+    <line x1="336" y1="88" x2="336" y2="136" stroke-width="16"/>
+
+    <!-- Calendar Grid Dots / Lines -->
+    <circle cx="160" cy="236" r="8" fill="#ffffff" stroke="none"/>
+    <circle cx="256" cy="236" r="8" fill="#ffffff" stroke="none"/>
+    <circle cx="352" cy="236" r="8" fill="#ffffff" stroke="none"/>
+
+    <circle cx="160" cy="300" r="8" fill="#ffffff" stroke="none"/>
+    <circle cx="352" cy="300" r="8" fill="#ffffff" stroke="none"/>
+
+    <circle cx="160" cy="364" r="8" fill="#ffffff" stroke="none"/>
+    <circle cx="256" cy="364" r="8" fill="#ffffff" stroke="none"/>
+    <circle cx="352" cy="364" r="8" fill="#ffffff" stroke="none"/>
+  </g>
+
+  <!-- Topmost Layer: Big Bold 69 Typography -->
+  <g filter="url(#dropShadow)">
+    <text x="256" y="348" 
+          font-family="system-ui, -apple-system, 'Kanit', sans-serif" 
+          font-size="172" 
+          font-weight="900" 
+          letter-spacing="-6" 
+          fill="#ffffff" 
+          text-anchor="middle">
+      69
+    </text>
+  </g>
+
+  <!-- Decorative Sparkle at top right -->
+  <path d="M400 90 L408 110 L428 118 L408 126 L400 146 L392 126 L372 118 L392 110 Z" fill="#ffffff" opacity="0.9"/>
+</svg>

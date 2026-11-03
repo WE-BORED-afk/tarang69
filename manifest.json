@@ -1,0 +1,47 @@
+{
+  "name": "TARANG69 - ตารางเรียน ม.6/9",
+  "short_name": "TARANG69",
+  "description": "เว็บแอปพลิเคชันตารางเรียนอัจฉริยะ ม.6/9 พร้อมระบบ Timeline Progress Tracker",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f8fafc",
+  "theme_color": "#4f46e5",
+  "lang": "th",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ดูคาบเรียนวันนี้",
+      "short_name": "วันนี้",
+      "description": "เปิดดูไทม์ไลน์คาบเรียนวันนี้",
+      "url": "./index.html",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "ตารางเรียนรวมทั้งสัปดาห์",
+      "short_name": "ตารางรวม",
+      "description": "เปิดดูตารางเรียนรวมทั้งสัปดาห์",
+      "url": "./index.html?view=table",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

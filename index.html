@@ -1,0 +1,2164 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>TARANG69 - ตารางเรียน ม.6/9</title>
+    <!-- PWA & Mobile Web App Meta -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="TARANG69">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Kanit & Sarabun -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Kanit', 'Sarabun', sans-serif;
+            background: linear-gradient(135deg, #fdfbfb 0%, #f3e7e9 50%, #e3eeff 100%);
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Desktop ในมุมมองตาราง: ให้พอดี 100vh */
+        @media (min-width: 1025px) {
+            body:not(.daily-mode) {
+                height: 100vh;
+                overflow: hidden;
+            }
+            body:not(.daily-mode) .timetable-wrapper {
+                flex: 1;
+                min-height: 0;
+            }
+        }
+
+        /* เมื่ออยู่ในมุมมองรายวัน (Daily View) หรือหน้าจอเล็ก ให้เลื่อนหน้าจอแนวตั้งได้อย่างอิสระ */
+        body.daily-mode,
+        @media (max-width: 1024px) {
+            body {
+                height: auto !important;
+                min-height: 100dvh !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+            .timetable-wrapper {
+                flex: none;
+                min-height: auto;
+            }
+        }
+
+        .timetable-wrapper {
+            width: 100%;
+            padding: 0.5rem 0.75rem 1rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .timetable-card {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(12px);
+            border-radius: 1.25rem;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 0 1px 1px rgba(255, 255, 255, 0.8) inset;
+            border: 2px solid #ffffff;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        /* ส่วนเลื่อนตารางแนวนอน */
+        .table-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f1f5f9;
+        }
+
+        .table-scroll-container::-webkit-scrollbar {
+            height: 6px;
+        }
+        .table-scroll-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 999px;
+        }
+        .table-scroll-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+        }
+
+        table.schedule-table {
+            width: 100%;
+            min-width: 860px;
+            table-layout: fixed;
+            border-collapse: separate;
+            border-spacing: 5px;
+            padding: 4px;
+        }
+
+        @media (min-width: 1025px) {
+            body:not(.daily-mode) table.schedule-table {
+                height: 100%;
+            }
+            body:not(.daily-mode) .timetable-card {
+                flex: 1;
+            }
+            body:not(.daily-mode) .table-scroll-container {
+                flex: 1;
+                display: flex;
+            }
+        }
+
+        col.col-day { width: 8.5%; }
+        col.col-period { width: 10.25%; }
+        col.col-break-short { width: 4.5%; }
+        col.col-break-lunch { width: 5%; }
+
+        th.period-header {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 0.35rem 0.2rem;
+            color: #334155;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            min-height: 48px;
+        }
+
+        .period-title {
+            font-size: clamp(0.72rem, 0.95vw, 1.05rem);
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.2;
+        }
+
+        .period-time {
+            font-size: clamp(0.6rem, 0.75vw, 0.85rem);
+            font-weight: 500;
+            color: #64748b;
+            margin-top: 2px;
+            line-height: 1.1;
+        }
+
+        th.day-cell {
+            border-radius: 0.85rem;
+            padding: 0.5rem 0.3rem;
+            text-align: center;
+            vertical-align: middle;
+            font-size: clamp(0.8rem, 1.1vw, 1.2rem);
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            position: relative;
+        }
+
+        @media (max-width: 1024px) {
+            th.day-cell {
+                position: sticky;
+                left: 4px;
+                z-index: 10;
+                box-shadow: 3px 0 8px rgba(0,0,0,0.08);
+            }
+            th.period-header:first-child {
+                position: sticky;
+                left: 4px;
+                z-index: 15;
+                background: #f8fafc !important;
+                box-shadow: 3px 0 8px rgba(0,0,0,0.08);
+            }
+        }
+
+        td.subject-cell {
+            border-radius: 0.85rem;
+            padding: 0.45rem 0.3rem;
+            text-align: center;
+            vertical-align: middle;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            user-select: none;
+        }
+
+        td.subject-cell:hover {
+            transform: translateY(-2px) scale(1.015);
+            box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.12);
+            z-index: 5;
+            filter: brightness(0.98);
+        }
+
+        td.subject-cell:active {
+            transform: scale(0.98);
+        }
+
+        .cell-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            width: 100%;
+            gap: 2px;
+        }
+
+        .subj-code {
+            font-size: clamp(0.7rem, 0.92vw, 1rem);
+            font-weight: 700;
+            line-height: 1.15;
+        }
+
+        .subj-name {
+            font-size: clamp(0.65rem, 0.82vw, 0.92rem);
+            font-weight: 600;
+            line-height: 1.15;
+        }
+
+        .subj-teacher {
+            font-size: clamp(0.58rem, 0.75vw, 0.82rem);
+            font-weight: 500;
+            opacity: 0.88;
+            line-height: 1.15;
+            margin-top: 1px;
+        }
+
+        .subj-room {
+            font-size: clamp(0.55rem, 0.7vw, 0.76rem);
+            font-weight: 600;
+            padding: 1px 7px;
+            border-radius: 999px;
+            margin-top: 2px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* สีประจำวัน */
+        .day-mon { background: #fef08a; color: #854d0e; border: 2px solid #fde047; }
+        .cell-mon { background: #fefce8; color: #713f12; border: 1.5px solid #fef08a; }
+        .cell-mon:hover { background: #fef9c3; border-color: #facc15; }
+        .cell-mon-double { background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%); color: #713f12; border: 1.5px solid #fde047; }
+
+        .day-tue { background: #fbcfe8; color: #9d174d; border: 2px solid #f9a8d4; }
+        .cell-tue { background: #fdf2f8; color: #831843; border: 1.5px solid #fbcfe8; }
+        .cell-tue:hover { background: #fce7f3; border-color: #f472b6; }
+        .cell-tue-double { background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); color: #831843; border: 1.5px solid #f9a8d4; }
+
+        .day-wed { background: #bbf7d0; color: #166534; border: 2px solid #86efac; }
+        .cell-wed { background: #f0fdf4; color: #14532d; border: 1.5px solid #bbf7d0; }
+        .cell-wed:hover { background: #dcfce7; border-color: #4ade80; }
+        .cell-wed-double { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); color: #14532d; border: 1.5px solid #86efac; }
+
+        .day-thu { background: #fed7aa; color: #9a3412; border: 2px solid #fdba74; }
+        .cell-thu { background: #fff7ed; color: #7c2d12; border: 1.5px solid #fed7aa; }
+        .cell-thu:hover { background: #ffedd5; border-color: #fb923c; }
+        .cell-thu-double { background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%); color: #7c2d12; border: 1.5px solid #fdba74; }
+
+        .day-fri { background: #bae6fd; color: #075985; border: 2px solid #7dd3fc; }
+        .cell-fri { background: #f0f9ff; color: #0c4a6e; border: 1.5px solid #bae6fd; }
+        .cell-fri:hover { background: #e0f2fe; border-color: #38bdf8; }
+        .cell-fri-double { background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #0c4a6e; border: 1.5px solid #7dd3fc; }
+
+        .cell-activity {
+            background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+            color: #581c87;
+            border: 1.5px solid #d8b4fe;
+        }
+        .cell-free {
+            background: repeating-linear-gradient(
+                -45deg,
+                #f8fafc,
+                #f8fafc 8px,
+                #f1f5f9 8px,
+                #f1f5f9 16px
+            );
+            color: #64748b;
+            border: 1.5px dashed #cbd5e1;
+        }
+
+        td.break-column {
+            background: linear-gradient(180deg, #f5f3ff 0%, #ede9fe 50%, #f5f3ff 100%);
+            border: 1.5px solid #ddd6fe;
+            border-radius: 0.85rem;
+            text-align: center;
+            vertical-align: middle;
+            padding: 0.5rem 0.15rem;
+        }
+
+        td.lunch-column {
+            background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 50%, #fff1f2 100%);
+            border: 1.5px solid #fecdd3;
+            border-radius: 0.85rem;
+            text-align: center;
+            vertical-align: middle;
+            padding: 0.5rem 0.15rem;
+        }
+
+        .break-vertical-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 0.5rem;
+        }
+
+        .break-badge {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            font-size: clamp(0.7rem, 0.9vw, 1rem);
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        .break-time-sub {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            font-size: clamp(0.55rem, 0.75vw, 0.85rem);
+            font-weight: 600;
+            opacity: 0.85;
+            white-space: nowrap;
+        }
+
+        /* แอนิเมชันตอนสลับวันในการ์ด */
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-card-fade {
+            animation: fadeInSlide 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .dimmed {
+            opacity: 0.22 !important;
+            filter: grayscale(60%);
+            transform: scale(0.97);
+        }
+        .highlighted {
+            outline: 3px solid #6366f1;
+            box-shadow: 0 0 0 3px #818cf8, 0 8px 20px rgba(99, 102, 241, 0.3) !important;
+            z-index: 25;
+            transform: scale(1.02);
+        }
+
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 6mm;
+            }
+            body {
+                background: #ffffff !important;
+                width: 100%;
+                height: 100%;
+                overflow: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            #tableView {
+                display: block !important;
+            }
+            #dailyView {
+                display: none !important;
+            }
+            .timetable-wrapper {
+                padding: 0 !important;
+                height: 94vh !important;
+            }
+            .timetable-card {
+                box-shadow: none !important;
+                border: 1px solid #cbd5e1 !important;
+            }
+            table.schedule-table {
+                min-width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ส่วนหัวเว็บไซต์ (Header Bar) -->
+    <header class="w-full px-3 sm:px-5 pt-3 pb-2 flex flex-col md:flex-row items-center justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+            <div class="flex items-center gap-2.5">
+                <img src="icon.svg" alt="TARANG69 Logo" class="w-10 h-10 rounded-2xl shadow-md shrink-0 border border-white/60">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg sm:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-600 tracking-tight">
+                            TARANG69
+                        </h1>
+                        <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-2xs">
+                            ม.6/9
+                        </span>
+                        <span class="hidden sm:inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-pink-100 text-pink-700 border border-pink-200 shadow-2xs">
+                            เทอม 2/2569
+                        </span>
+                    </div>
+                    <p class="text-[11px] sm:text-xs text-slate-500 font-medium">
+                        เว็บแอปตารางเรียนอัจฉริยะ • Daily Progress Tracker
+                    </p>
+                </div>
+            </div>
+
+            <!-- สลับโหมดบนมือถือ -->
+            <div class="flex bg-slate-200/80 p-0.5 rounded-xl text-xs font-semibold no-print md:hidden">
+                <button id="mobileBtnTable" onclick="switchView('table')" class="px-2.5 py-1.5 rounded-lg transition text-slate-600">
+                    📊 ตาราง
+                </button>
+                <button id="mobileBtnDaily" onclick="switchView('daily')" class="px-2.5 py-1.5 rounded-lg transition bg-white text-indigo-700 shadow-xs">
+                    📱 รายวัน
+                </button>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 w-full md:w-auto justify-end no-print flex-wrap">
+            <!-- สลับโหมดบนจอใหญ่ -->
+            <div class="hidden md:flex bg-white/90 border border-slate-200 p-0.5 rounded-xl text-xs font-semibold shadow-xs">
+                <button id="desktopBtnTable" onclick="switchView('table')" class="px-3 py-1.5 rounded-lg transition bg-indigo-600 text-white shadow-xs">
+                    📊 มุมมองตารางรวม
+                </button>
+                <button id="desktopBtnDaily" onclick="switchView('daily')" class="px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900">
+                    📱 มุมมองรายวัน
+                </button>
+            </div>
+
+            <!-- ฟิลเตอร์ -->
+            <div class="relative flex-1 sm:flex-none">
+                <select id="highlightFilter" onchange="filterSchedule(this.value)" class="w-full appearance-none bg-white/95 border border-slate-200 hover:border-indigo-300 text-slate-700 text-xs sm:text-sm font-medium rounded-xl px-3 py-1.5 pr-7 shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer transition">
+                    <option value="all">✨ แสดงทั้งหมด (ทุกวิชา)</option>
+                    <option value="ชีวะ">🧬 ชีวะ (ครูนริลญา)</option>
+                    <option value="เคมี">🧪 เคมี (ครูสุธีรา)</option>
+                    <option value="ฟิสิกส์">⚡ ฟิสิกส์ (ครูมนตรี)</option>
+                    <option value="คณิต">📐 คณิต (ครูจินตนา / ครูนพพล)</option>
+                    <option value="ภาษาอังกฤษ">🇬🇧 อังกฤษ (ครูรัชนีกร / ครูปิยะวัฒน์)</option>
+                    <option value="สังคม">🌍 สังคม (ครูอิษฎาภรณ์ / วาสนา / ศุวัชรกัณต์)</option>
+                    <option value="ภาษาไทย">📖 ไทย (ครูจินตนา)</option>
+                    <option value="วิชาคอมพิวเตอร์">💻 คอมพิวเตอร์ (ครูพิมพ์ระวี)</option>
+                    <option value="ห้อง">📍 วิชาที่ต้องเดินเรียน (มีห้องระบุ)</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+            </div>
+
+            <!-- ปุ่มพิมพ์ -->
+            <button onclick="window.print()" class="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-xl shadow-xs hover:shadow transition active:scale-95 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                <span>พิมพ์</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ==================== 1. มุมมองตารางรวม (Table View) ==================== -->
+    <main id="tableView" class="timetable-wrapper">
+        <div class="flex lg:hidden items-center justify-center gap-1.5 text-[11px] text-indigo-700 bg-indigo-50/80 border border-indigo-100 rounded-lg py-1 px-2.5 mb-1.5 no-print">
+            <span>👈</span>
+            <span>ปัดซ้าย-ขวาบนตาราง เพื่อดูคาบเรียนทั้งหมด</span>
+            <span>👉</span>
+        </div>
+
+        <div class="timetable-card">
+            <div class="table-scroll-container">
+                <table class="schedule-table">
+                    <colgroup>
+                        <col class="col-day">
+                        <col class="col-period">
+                        <col class="col-period">
+                        <col class="col-break-short">
+                        <col class="col-period">
+                        <col class="col-period">
+                        <col class="col-break-lunch">
+                        <col class="col-period">
+                        <col class="col-period">
+                        <col class="col-period">
+                        <col class="col-period">
+                    </colgroup>
+
+                    <thead>
+                        <tr>
+                            <th class="period-header bg-slate-100/90">
+                                <div class="period-title text-slate-700">วัน / เวลา</div>
+                                <div class="period-time">คาบเรียน</div>
+                            </th>
+                            <th class="period-header">
+                                <div class="period-title">คาบที่ 1</div>
+                                <div class="period-time">08.20 - 09.10 น.</div>
+                            </th>
+                            <th class="period-header">
+                                <div class="period-title">คาบที่ 2</div>
+                                <div class="period-time">09.10 - 10.00 น.</div>
+                            </th>
+                            <th class="period-header !bg-purple-50/90 !border-purple-200">
+                                <div class="period-title !text-purple-800">พัก 20 นาที</div>
+                                <div class="period-time !text-purple-600">10.00 - 10.20 น.</div>
+                            </th>
+                            <th class="period-header">
+                                <div class="period-title">คาบที่ 3</div>
+                                <div class="period-time">10.20 - 11.10 น.</div>
+                            </th>
+                            <th class="period-header">
+                                <div class="period-title">คาบที่ 4</div>
+                                <div class="period-time">11.10 - 12.00 น.</div>
+                            </th>
+                            <th class="period-header !bg-rose-50/90 !border-rose-200">
+                                <div class="period-title !text-rose-800">พัก 50 นาที</div>
+                                <div class="period-time !text-rose-600">12.00 - 12.50 น.</div>
+                            </th>
+                            <th class="period-header">
+                                <div class="period-title">คาบที่ 5</div>
+                                <div class="period-time">12.50 - 13.40 น.</div>
+                            </th>
+                            <th class="period-header">
+                                <div class="period-title">คาบที่ 6</div>
+                                <div class="period-time">13.40 - 14.30 น.</div>
+                            </th>
+                            <th class="period-header">
+                                <div class="period-title">คาบที่ 7</div>
+                                <div class="period-time">14.30 - 15.20 น.</div>
+                            </th>
+                            <th class="period-header">
+                                <div class="period-title">คาบที่ 8</div>
+                                <div class="period-time">15.20 - 16.10 น.</div>
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <!-- วันจันทร์ -->
+                        <tr>
+                            <th class="day-cell day-mon">
+                                <div>วันจันทร์</div>
+                                <div class="text-[10px] font-medium opacity-75 hidden md:block">Mon</div>
+                            </th>
+                            <td class="subject-cell cell-mon" onclick="openModal('วันจันทร์', 'คาบที่ 1 (08.20 - 09.10 น.)', 'ว33103', 'ชีวะ', 'ครูนริลญา', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ว33103</span>
+                                    <span class="subj-name">(ชีวะ)</span>
+                                    <span class="subj-teacher">ครูนริลญา</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-mon" onclick="openModal('วันจันทร์', 'คาบที่ 2 (09.10 - 10.00 น.)', 'อ33202', 'ภาษาอังกฤษอ่าน-เขียน', 'ครูปิยะวัฒน์', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">อ33202</span>
+                                    <span class="subj-name">(ภาษาอังกฤษอ่าน-เขียน)</span>
+                                    <span class="subj-teacher">ครูปิยะวัฒน์</span>
+                                </div>
+                            </td>
+                            <td rowspan="5" class="break-column">
+                                <div class="break-vertical-box text-purple-800">
+                                    <span class="text-base md:text-lg">🧃</span>
+                                    <span class="break-badge">พัก 20 นาที</span>
+                                    <span class="break-time-sub">10.00 - 10.20 น.</span>
+                                </div>
+                            </td>
+                            <td colspan="2" class="subject-cell cell-mon-double" onclick="openModal('วันจันทร์', 'คาบที่ 3 - 4 (10.20 - 12.00 น.)', 'ว33286', 'วิชาคอมพิวเตอร์', 'ครูพิมพ์ระวี', 'ห้องคอม 6')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ว33286 (วิชาคอมพิวเตอร์)</span>
+                                    <span class="subj-teacher">ครูพิมพ์ระวี</span>
+                                    <span class="subj-room text-amber-900">📍 ห้องคอม 6</span>
+                                </div>
+                            </td>
+                            <td rowspan="5" class="lunch-column">
+                                <div class="break-vertical-box text-rose-800">
+                                    <span class="text-base md:text-lg">🍱</span>
+                                    <span class="break-badge">พักกลางวัน 50 นาที</span>
+                                    <span class="break-time-sub">12.00 - 12.50 น.</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-mon" onclick="openModal('วันจันทร์', 'คาบที่ 5 (12.50 - 13.40 น.)', 'ค33106', 'คณิตศาสตร์พื้นฐาน', 'ครูจินตนา', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ค33106</span>
+                                    <span class="subj-name">(คณิตศาสตร์พื้นฐาน)</span>
+                                    <span class="subj-teacher">ครูจินตนา</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-mon" onclick="openModal('วันจันทร์', 'คาบที่ 6 (13.40 - 14.30 น.)', 'อ33102', 'ภาษาอังกฤษพื้นฐาน', 'ครูรัชนีกร', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">อ33102</span>
+                                    <span class="subj-name">(ภาษาอังกฤษพื้นฐาน)</span>
+                                    <span class="subj-teacher">ครูรัชนีกร</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-mon" onclick="openModal('วันจันทร์', 'คาบที่ 7 (14.30 - 15.20 น.)', 'ว33102', 'เคมี', 'ครูสุธีรา', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ว33102</span>
+                                    <span class="subj-name">(เคมี)</span>
+                                    <span class="subj-teacher">ครูสุธีรา</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-activity" onclick="openModal('วันจันทร์', 'คาบที่ 8 (15.20 - 16.10 น.)', 'กิจกรรม', 'อบรมคุณธรรม', '-', 'ตามกำหนดการโรงเรียน')">
+                                <div class="cell-content">
+                                    <span class="subj-code">อบรมคุณธรรม</span>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- วันอังคาร -->
+                        <tr>
+                            <th class="day-cell day-tue">
+                                <div>วันอังคาร</div>
+                                <div class="text-[10px] font-medium opacity-75 hidden md:block">Tue</div>
+                            </th>
+                            <td class="subject-cell cell-tue" onclick="openModal('วันอังคาร', 'คาบที่ 1 (08.20 - 09.10 น.)', 'ส33102', 'สังคมศึกษาพื้นฐาน', 'ครูอิษฎาภรณ์', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ส33102</span>
+                                    <span class="subj-name">(สังคมศึกษาพื้นฐาน)</span>
+                                    <span class="subj-teacher">ครูอิษฎาภรณ์</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-tue" onclick="openModal('วันอังคาร', 'คาบที่ 2 (09.10 - 10.00 น.)', 'ศ33102', 'ดนตรี นาฏศิลป์', 'ครูวสันต์', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ศ33102</span>
+                                    <span class="subj-name">(ดนตรี นาฏศิลป์)</span>
+                                    <span class="subj-teacher">ครูวสันต์</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-tue" onclick="openModal('วันอังคาร', 'คาบที่ 3 (10.20 - 11.10 น.)', 'อ33102', 'ภาษาอังกฤษพื้นฐาน', 'ครูรัชนีกร', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">อ33102</span>
+                                    <span class="subj-name">(ภาษาอังกฤษพื้นฐาน)</span>
+                                    <span class="subj-teacher">ครูรัชนีกร</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-tue" onclick="openModal('วันอังคาร', 'คาบที่ 4 (11.10 - 12.00 น.)', 'ค33206', 'คณิตศาสตร์เพิ่มเติม', 'ครูนพพล', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ค33206</span>
+                                    <span class="subj-name">(คณิตศาสตร์เพิ่มเติม)</span>
+                                    <span class="subj-teacher">ครูนพพล</span>
+                                </div>
+                            </td>
+                            <td colspan="2" class="subject-cell cell-tue-double" onclick="openModal('วันอังคาร', 'คาบที่ 5 - 6 (12.50 - 14.30 น.)', 'ว33103', 'ชีวะ', 'ครูนริลญา', 'ห้อง Lab 327')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ว33103 (ชีวะ)</span>
+                                    <span class="subj-teacher">ครูนริลญา</span>
+                                    <span class="subj-room text-pink-900">📍 ห้อง Lab 327</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-tue" onclick="openModal('วันอังคาร', 'คาบที่ 7 (14.30 - 15.20 น.)', 'ส33206', 'สังคมศึกษาเพิ่มเติม', 'ครูศุวัชรกัณต์', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ส33206</span>
+                                    <span class="subj-name">(สังคมศึกษาเพิ่มเติม)</span>
+                                    <span class="subj-teacher">ครูศุวัชรกัณต์</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-free" onclick="openModal('วันอังคาร', 'คาบที่ 8 (15.20 - 16.10 น.)', '-', 'คาบอิสระ', '-', 'ตามอัธยาศัย')">
+                                <div class="cell-content">
+                                    <span class="subj-code">คาบอิสระ</span>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- วันพุธ -->
+                        <tr>
+                            <th class="day-cell day-wed">
+                                <div>วันพุธ</div>
+                                <div class="text-[10px] font-medium opacity-75 hidden md:block">Wed</div>
+                            </th>
+                            <td colspan="2" class="subject-cell cell-wed-double" onclick="openModal('วันพุธ', 'คาบที่ 1 - 2 (08.20 - 10.00 น.)', 'ว33101', 'ฟิสิกส์', 'ครูมนตรี', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ว33101 (ฟิสิกส์)</span>
+                                    <span class="subj-teacher">ครูมนตรี</span>
+                                </div>
+                            </td>
+                            <td colspan="2" class="subject-cell cell-wed-double" onclick="openModal('วันพุธ', 'คาบที่ 3 - 4 (10.20 - 12.00 น.)', 'ง33101', 'การงานอาชีพพื้นฐาน', 'ระบุว่า ครูย้าย', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ง33101 (การงานอาชีพพื้นฐาน)</span>
+                                    <span class="subj-teacher text-emerald-800/80 italic">(ระบุว่า ครูย้าย)</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-wed" onclick="openModal('วันพุธ', 'คาบที่ 5 (12.50 - 13.40 น.)', 'ส33102', 'สังคมศึกษาพื้นฐาน', 'ครูอิษฎาภรณ์', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ส33102</span>
+                                    <span class="subj-name">(สังคมศึกษาพื้นฐาน)</span>
+                                    <span class="subj-teacher">ครูอิษฎาภรณ์</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-wed" onclick="openModal('วันพุธ', 'คาบที่ 6 (13.40 - 14.30 น.)', 'อ33202', 'ภาษาอังกฤษอ่าน-เขียน', 'ครูปิยะวัฒน์', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">อ33202</span>
+                                    <span class="subj-name">(ภาษาอังกฤษอ่าน-เขียน)</span>
+                                    <span class="subj-teacher">ครูปิยะวัฒน์</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-wed" onclick="openModal('วันพุธ', 'คาบที่ 7 (14.30 - 15.20 น.)', 'ค33206', 'คณิตศาสตร์เพิ่มเติม', 'ครูนพพล', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ค33206</span>
+                                    <span class="subj-name">(คณิตศาสตร์เพิ่มเติม)</span>
+                                    <span class="subj-teacher">ครูนพพล</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-activity" onclick="openModal('วันพุธ', 'คาบที่ 8 (15.20 - 16.10 น.)', 'กิจกรรม', 'โฮมรูม', '-', 'ห้องเรียนประจำ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">โฮมรูม</span>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- วันพฤหัสบดี -->
+                        <tr>
+                            <th class="day-cell day-thu">
+                                <div>วันพฤหัส</div>
+                                <div class="text-[10px] font-medium opacity-75 hidden md:block">Thu</div>
+                            </th>
+                            <td class="subject-cell cell-thu" onclick="openModal('วันพฤหัสบดี', 'คาบที่ 1 (08.20 - 09.10 น.)', 'ว33101', 'ฟิสิกส์', 'ครูมนตรี', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ว33101</span>
+                                    <span class="subj-name">(ฟิสิกส์)</span>
+                                    <span class="subj-teacher">ครูมนตรี</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-thu" onclick="openModal('วันพฤหัสบดี', 'คาบที่ 2 (09.10 - 10.00 น.)', 'ค33206', 'คณิตศาสตร์เพิ่มเติม', 'ครูนพพล', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ค33206</span>
+                                    <span class="subj-name">(คณิตศาสตร์เพิ่มเติม)</span>
+                                    <span class="subj-teacher">ครูนพพล</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-thu" onclick="openModal('วันพฤหัสบดี', 'คาบที่ 3 (10.20 - 11.10 น.)', 'ส33202', 'สังคมศึกษาเพิ่มเติม', 'ครูวาสนา', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ส33202</span>
+                                    <span class="subj-name">(สังคมศึกษาเพิ่มเติม)</span>
+                                    <span class="subj-teacher">ครูวาสนา</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-thu" onclick="openModal('วันพฤหัสบดี', 'คาบที่ 4 (11.10 - 12.00 น.)', 'พ33102', 'สุขศึกษาและพลศึกษา', 'ครูภานุวัฒน์', 'ห้องเรียนปกติ / สนาม')">
+                                <div class="cell-content">
+                                    <span class="subj-code">พ33102</span>
+                                    <span class="subj-name">(สุขศึกษาและพลศึกษา)</span>
+                                    <span class="subj-teacher">ครูภานุวัฒน์</span>
+                                </div>
+                            </td>
+                            <td colspan="2" class="subject-cell cell-thu-double" onclick="openModal('วันพฤหัสบดี', 'คาบที่ 5 - 6 (12.50 - 14.30 น.)', 'ว33102', 'เคมี', 'ครูสุธีรา', 'ห้อง Lab 325')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ว33102 (เคมี)</span>
+                                    <span class="subj-teacher">ครูสุธีรา</span>
+                                    <span class="subj-room text-orange-900">📍 ห้อง Lab 325</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-thu" onclick="openModal('วันพฤหัสบดี', 'คาบที่ 7 (14.30 - 15.20 น.)', 'ท33102', 'ภาษาไทยพื้นฐาน', 'ครูจินตนา', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ท33102</span>
+                                    <span class="subj-name">(ภาษาไทยพื้นฐาน)</span>
+                                    <span class="subj-teacher">ครูจินตนา</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-activity" onclick="openModal('วันพฤหัสบดี', 'คาบที่ 8 (15.20 - 16.10 น.)', 'กิจกรรมพัฒนาผู้เรียน', 'แนะแนว', 'ครูจิรภัทร์', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">แนะแนว</span>
+                                    <span class="subj-teacher">ครูจิรภัทร์</span>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- วันศุกร์ -->
+                        <tr>
+                            <th class="day-cell day-fri">
+                                <div>วันศุกร์</div>
+                                <div class="text-[10px] font-medium opacity-75 hidden md:block">Fri</div>
+                            </th>
+                            <td class="subject-cell cell-fri" onclick="openModal('วันศุกร์', 'คาบที่ 1 (08.20 - 09.10 น.)', 'ค33106', 'คณิตศาสตร์พื้นฐาน', 'ครูจินตนา', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ค33106</span>
+                                    <span class="subj-name">(คณิตศาสตร์พื้นฐาน)</span>
+                                    <span class="subj-teacher">ครูจินตนา</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-fri" onclick="openModal('วันศุกร์', 'คาบที่ 2 (09.10 - 10.00 น.)', 'ท33102', 'ภาษาไทยพื้นฐาน', 'ครูจินตนา', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ท33102</span>
+                                    <span class="subj-name">(ภาษาไทยพื้นฐาน)</span>
+                                    <span class="subj-teacher">ครูจินตนา</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-fri" onclick="openModal('วันศุกร์', 'คาบที่ 3 (10.20 - 11.10 น.)', 'ว33101', 'ฟิสิกส์', 'ครูมนตรี', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ว33101</span>
+                                    <span class="subj-name">(ฟิสิกส์)</span>
+                                    <span class="subj-teacher">ครูมนตรี</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-fri" onclick="openModal('วันศุกร์', 'คาบที่ 4 (11.10 - 12.00 น.)', 'ค33206', 'คณิตศาสตร์เพิ่มเติม', 'ครูนพพล', 'ห้องเรียนปกติ')">
+                                <div class="cell-content">
+                                    <span class="subj-code">ค33206</span>
+                                    <span class="subj-name">(คณิตศาสตร์เพิ่มเติม)</span>
+                                    <span class="subj-teacher">ครูนพพล</span>
+                                </div>
+                            </td>
+                            <td class="subject-cell cell-activity" onclick="openModal('วันศุกร์', 'คาบที่ 5 (12.50 - 13.40 น.)', 'กิจกรรมพัฒนาผู้เรียน', 'กิจกรรมชุมนุม', '-', 'ตามชุมนุมที่ลงทะเบียน')">
+                                <div class="cell-content">
+                                    <span class="subj-code">กิจกรรมชุมนุม</span>
+                                </div>
+                            </td>
+                            <td colspan="3" class="subject-cell cell-free" onclick="openModal('วันศุกร์', 'คาบที่ 6 - 8 (13.40 - 16.10 น.)', '-', 'คาบอิสระ (3 คาบ)', '-', 'ตามอัธยาศัย')">
+                                <div class="cell-content">
+                                    <span class="subj-code text-slate-500">คาบอิสระ (คาบ 6 - 8)</span>
+                                    <span class="subj-teacher text-slate-400">13.40 – 16.10 น.</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- ==================== 2. มุมมองรายวัน (Daily Card View) ==================== -->
+    <section id="dailyView" class="w-full max-w-2xl mx-auto px-3 sm:px-5 pb-20 hidden no-print">
+        <!-- แถบเลือกวัน (จันทร์ - ศุกร์) เลื่อนแนวนอนได้ -->
+        <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 pt-1 scrollbar-none" id="dailyTabsContainer">
+            <button onclick="selectDailyTab('จันทร์')" id="tab-mon" class="daily-tab-btn flex-1 min-w-[68px] py-2 px-2.5 rounded-2xl text-xs sm:text-sm font-bold transition flex flex-col items-center justify-center border border-amber-200">
+                <span>จันทร์</span>
+                <span class="text-[10px] font-normal opacity-70">Mon</span>
+            </button>
+            <button onclick="selectDailyTab('อังคาร')" id="tab-tue" class="daily-tab-btn flex-1 min-w-[68px] py-2 px-2.5 rounded-2xl text-xs sm:text-sm font-bold transition flex flex-col items-center justify-center border border-pink-200">
+                <span>อังคาร</span>
+                <span class="text-[10px] font-normal opacity-70">Tue</span>
+            </button>
+            <button onclick="selectDailyTab('พุธ')" id="tab-wed" class="daily-tab-btn flex-1 min-w-[68px] py-2 px-2.5 rounded-2xl text-xs sm:text-sm font-bold transition flex flex-col items-center justify-center border border-green-200">
+                <span>พุธ</span>
+                <span class="text-[10px] font-normal opacity-70">Wed</span>
+            </button>
+            <button onclick="selectDailyTab('พฤหัสบดี')" id="tab-thu" class="daily-tab-btn flex-1 min-w-[68px] py-2 px-2.5 rounded-2xl text-xs sm:text-sm font-bold transition flex flex-col items-center justify-center border border-orange-200">
+                <span>พฤหัส</span>
+                <span class="text-[10px] font-normal opacity-70">Thu</span>
+            </button>
+            <button onclick="selectDailyTab('ศุกร์')" id="tab-fri" class="daily-tab-btn flex-1 min-w-[68px] py-2 px-2.5 rounded-2xl text-xs sm:text-sm font-bold transition flex flex-col items-center justify-center border border-sky-200">
+                <span>ศุกร์</span>
+                <span class="text-[10px] font-normal opacity-70">Fri</span>
+            </button>
+        </div>
+
+        <!-- แถบคำแนะนำการเลื่อนหน้าจอและปัดซ้าย-ขวา -->
+        <div class="flex items-center justify-between text-[11px] text-slate-500 bg-white/70 backdrop-blur-xs border border-slate-200/80 rounded-xl px-3 py-1.5 mb-2 shadow-2xs">
+            <span class="flex items-center gap-1 font-medium text-slate-600">
+                <span>👆</span> เลื่อนขึ้น-ลง ดูทุกคาบ
+            </span>
+            <span class="flex items-center gap-1 font-semibold text-indigo-600">
+                <span>👈</span> ปัดซ้าย-ขวา เปลี่ยนวัน <span>👉</span>
+            </span>
+        </div>
+
+        <!-- แถบเลือกแผนแบบกะทัดรัด (Compact Capsule) -->
+        <div class="flex items-center justify-between gap-2 mb-2 px-1">
+            <button id="compactPlanBtn" onclick="openPlanBottomSheet()" class="inline-flex items-center gap-1.5 bg-white/95 hover:bg-slate-50 border border-slate-200/90 hover:border-indigo-300 text-slate-700 text-xs font-semibold px-3 py-1.5 rounded-full shadow-2xs transition active:scale-95 cursor-pointer">
+                <span>🔔</span>
+                <span id="compactPlanLabel">แผน 1 ปกติ</span>
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <span class="text-[10px] font-medium text-slate-400">
+                รีเซ็ตอัตโนมัติทุกวัน
+            </span>
+        </div>
+
+        <!-- กล่องการ์ดสรุปคาบเรียนประจำวัน (Timeline Progress Tracker) -->
+        <div id="dailySwipeArea" class="bg-white/95 backdrop-blur-md rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 touch-pan-y">
+            <!-- ส่วนหัวการ์ด พร้อมปุ่มลูกศรเลื่อนวันก่อนหน้า-ถัดไป -->
+            <div class="pb-3 border-b border-slate-100">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <button onclick="prevDay()" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 transition active:scale-90" title="วันก่อนหน้า">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <div>
+                            <h2 id="dailyHeaderTitle" class="text-lg sm:text-xl font-bold text-slate-800">วันจันทร์</h2>
+                            <p id="dailyHeaderSub" class="text-xs text-slate-500 font-medium">Monday • Timeline คาบเรียน</p>
+                        </div>
+                        <button onclick="nextDay()" class="p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 transition active:scale-90" title="วันถัดไป">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span id="dailyTodayBadge" class="hidden px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 shadow-2xs">
+                            วันนี้
+                        </span>
+                        <span id="dailyProgressBadge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
+                            0/8 คาบ
+                        </span>
+                    </div>
+                </div>
+
+                <!-- แถบ Progress Bar ความคืบหน้าของวัน -->
+                <div class="mt-2.5 flex items-center gap-2">
+                    <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                        <div id="dailyProgressBar" class="bg-indigo-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <span id="dailyProgressPercent" class="text-[11px] font-bold text-indigo-700 shrink-0">0%</span>
+                </div>
+
+                <!-- แถบจำลองเวลา / ตรวจเวลาจริง (Time Simulator) - ซ่อนไว้ชั่วคราว (ลบคลาส hidden หากต้องการเปิดใช้งาน) -->
+                <div id="timeSimulatorPanel" class="hidden mt-3 bg-slate-50/90 border border-slate-200/80 rounded-2xl p-2.5">
+                    <div class="flex items-center justify-between gap-2 mb-1.5">
+                        <span class="text-[11px] font-bold text-slate-600 flex items-center gap-1">
+                            ⏱️ จำลองเวลาในห้องเรียน:
+                        </span>
+                        <span id="simTimeLabel" class="text-[11px] font-mono font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+                            ตามเวลาจริง
+                        </span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5" id="simTimeButtons">
+                        <button onclick="setDailySimTime(null, null, 'ตามเวลาจริง', this)" id="btnSimReal" class="btn-sim text-[11px] px-2.5 py-1 rounded-xl bg-indigo-600 text-white font-semibold transition active:scale-95 shadow-2xs">
+                            ⏰ เวลาจริง
+                        </button>
+                        <button onclick="setDailySimTime(8, 45, 'คาบ 1 (08:45 น.)', this)" class="btn-sim text-[11px] px-2.5 py-1 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-medium transition active:scale-95 text-slate-700">
+                            คาบ 1
+                        </button>
+                        <button onclick="setDailySimTime(9, 30, 'คาบ 2 (09:30 น.)', this)" class="btn-sim text-[11px] px-2.5 py-1 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-medium transition active:scale-95 text-slate-700">
+                            คาบ 2
+                        </button>
+                        <button onclick="setDailySimTime(10, 10, 'พัก 20 นาที (10:10 น.)', this)" class="btn-sim text-[11px] px-2.5 py-1 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-medium transition active:scale-95 text-slate-700">
+                            พักสาย
+                        </button>
+                        <button onclick="setDailySimTime(11, 30, 'คาบ 4 (11:30 น.)', this)" class="btn-sim text-[11px] px-2.5 py-1 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-medium transition active:scale-95 text-slate-700">
+                            คาบ 4
+                        </button>
+                        <button onclick="setDailySimTime(12, 20, 'พักเที่ยง (12:20 น.)', this)" class="btn-sim text-[11px] px-2.5 py-1 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-medium transition active:scale-95 text-slate-700">
+                            พักเที่ยง
+                        </button>
+                        <button onclick="setDailySimTime(14, 0, 'คาบ 6 (14:00 น.)', this)" class="btn-sim text-[11px] px-2.5 py-1 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-medium transition active:scale-95 text-slate-700">
+                            คาบ 6
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- แบนเนอร์ไฮไลท์ด่วน Now & Next -->
+            <div id="nowNextBanner" class="mt-3.5 mb-1.5">
+                <!-- เนื้อหาจะถูกเรนเดอร์โดย JavaScript updateNowNextBanner() -->
+            </div>
+
+            <!-- รายการคาบเรียนแบบ Timeline Step Indicator -->
+            <div id="dailyPeriodsList" class="space-y-0 pt-2">
+                <!-- เนื้อหาจะถูกเรนเดอร์โดย JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal แสดงรายละเอียดวิชาเมื่อคลิก -->
+    <div id="subjectModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm transition-opacity no-print p-4" onclick="closeModal(event)">
+        <div class="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-100 transform transition-all scale-100" onclick="event.stopPropagation()">
+            <div class="flex items-start justify-between border-b border-slate-100 pb-3 mb-4">
+                <div>
+                    <span id="modalDayBadge" class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 mb-1">วันจันทร์</span>
+                    <h3 id="modalPeriod" class="text-xs sm:text-sm font-medium text-slate-500">คาบที่ 1 (08.20 - 09.10 น.)</h3>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full p-2 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
+                    <div id="modalCode" class="text-xl sm:text-2xl font-bold text-indigo-900">ว33103</div>
+                    <div id="modalName" class="text-base sm:text-lg font-semibold text-slate-700 mt-0.5">ชีวะ</div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2.5 text-sm">
+                    <div class="bg-purple-50/70 p-3 rounded-xl border border-purple-100">
+                        <div class="text-[11px] text-purple-600 font-medium">👨‍🏫 ครูผู้สอน</div>
+                        <div id="modalTeacher" class="font-bold text-slate-800 mt-0.5 text-sm sm:text-base">ครูนริลญา</div>
+                    </div>
+                    <div class="bg-amber-50/70 p-3 rounded-xl border border-amber-100">
+                        <div class="text-[11px] text-amber-700 font-medium">📍 ห้องเรียน</div>
+                        <div id="modalRoom" class="font-bold text-slate-800 mt-0.5 text-sm sm:text-base">ห้องเรียนปกติ</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5">
+                <button onclick="closeModal()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm transition shadow-sm active:scale-95">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Sheet Modal สำหรับเลือกแผนตารางเวลาเรียน -->
+    <div id="planBottomSheetModal" class="fixed inset-0 z-50 hidden no-print">
+        <!-- Backdrop -->
+        <div id="bottomSheetBackdrop" onclick="closePlanBottomSheet()" class="absolute inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 opacity-0"></div>
+        <!-- Sheet Container -->
+        <div class="absolute inset-x-0 bottom-0 max-w-lg mx-auto flex flex-col justify-end p-0 sm:p-4 pointer-events-none">
+            <div id="planBottomSheet" class="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-100 p-5 pt-3 transition-transform duration-300 transform translate-y-full max-h-[85vh] overflow-y-auto pointer-events-auto">
+                <!-- Drag Handle -->
+                <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-3 cursor-pointer" onclick="closePlanBottomSheet()"></div>
+                
+                <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <span class="text-base">🔔</span>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-800">เลือกแผนตารางเวลาเรียน</h3>
+                            <p class="text-[11px] text-slate-500 font-medium">ปรับเวลาคาบเรียนตามประกาศของโรงเรียน</p>
+                        </div>
+                    </div>
+                    <button onclick="closePlanBottomSheet()" class="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                <!-- Plan Options -->
+                <div class="space-y-2" id="bottomSheetPlanList">
+                    <button onclick="selectPlanFromSheet('plan1')" id="sheet-plan-btn-plan1" class="w-full text-left p-3 rounded-2xl border transition-all flex items-center justify-between cursor-pointer">
+                        <div>
+                            <div class="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>แผนที่ 1: เวลาเรียนปกติ</span>
+                                <span class="plan-check-icon hidden text-indigo-600 font-bold">✓</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">คาบละ 50 นาที • 08.20 - 16.10 น.</div>
+                        </div>
+                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">ปกติ</span>
+                    </button>
+
+                    <button onclick="selectPlanFromSheet('plan2')" id="sheet-plan-btn-plan2" class="w-full text-left p-3 rounded-2xl border transition-all flex items-center justify-between cursor-pointer">
+                        <div>
+                            <div class="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>แผนที่ 2: ประชุมหลังเลิกเรียน</span>
+                                <span class="plan-check-icon hidden text-indigo-600 font-bold">✓</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">คาบละ 45 นาที • เลิกเรียน 15.10 น.</div>
+                        </div>
+                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">ท้ายวัน</span>
+                    </button>
+
+                    <button onclick="selectPlanFromSheet('plan3')" id="sheet-plan-btn-plan3" class="w-full text-left p-3 rounded-2xl border transition-all flex items-center justify-between cursor-pointer">
+                        <div>
+                            <div class="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>แผนที่ 3: ประชุมหลังประกอบพิธี</span>
+                                <span class="plan-check-icon hidden text-indigo-600 font-bold">✓</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">เริ่มเรียนคาบ 1 ตอน 08.45 น.</div>
+                        </div>
+                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">เช้า</span>
+                    </button>
+
+                    <button onclick="selectPlanFromSheet('plan4')" id="sheet-plan-btn-plan4" class="w-full text-left p-3 rounded-2xl border transition-all flex items-center justify-between cursor-pointer">
+                        <div>
+                            <div class="text-xs sm:text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                <span>แผนที่ 4: กิจกรรมช่วงพักเที่ยง</span>
+                                <span class="plan-check-icon hidden text-indigo-600 font-bold">✓</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500 mt-0.5">พักเที่ยงยาว 1 ชม. 50 นาที • 11.20 - 13.10 น.</div>
+                        </div>
+                        <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">เที่ยงยาว</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dayOrder = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์"];
+
+        const scheduleData = {
+            "จันทร์": {
+                name: "วันจันทร์",
+                en: "Monday",
+                colorClass: "bg-yellow-50 text-yellow-900 border-yellow-200",
+                activeTabClass: "bg-yellow-400 text-yellow-950 shadow-sm border-yellow-500",
+                badgeClass: "bg-yellow-100 text-yellow-800 border-yellow-300",
+                items: [
+                    { type: "subject", period: "คาบที่ 1 (08.20 - 09.10 น.)", code: "ว33103", name: "ชีวะ", teacher: "ครูนริลญา", room: "ห้องเรียนปกติ" },
+                    { type: "subject", period: "คาบที่ 2 (09.10 - 10.00 น.)", code: "อ33202", name: "ภาษาอังกฤษอ่าน-เขียน", teacher: "ครูปิยะวัฒน์", room: "ห้องเรียนปกติ" },
+                    { type: "break", title: "พัก 20 นาที", time: "10.00 - 10.20 น.", icon: "🧃", color: "purple" },
+                    { type: "subject", period: "คาบที่ 3 - 4 (10.20 - 12.00 น.)", code: "ว33286", name: "วิชาคอมพิวเตอร์", teacher: "ครูพิมพ์ระวี", room: "ห้องคอม 6", isDouble: true },
+                    { type: "break", title: "พักกลางวัน 50 นาที", time: "12.00 - 12.50 น.", icon: "🍱", color: "rose" },
+                    { type: "subject", period: "คาบที่ 5 (12.50 - 13.40 น.)", code: "ค33106", name: "คณิตศาสตร์พื้นฐาน", teacher: "ครูจินตนา", room: "ห้องเรียนปกติ" },
+                    { type: "subject", period: "คาบที่ 6 (13.40 - 14.30 น.)", code: "อ33102", name: "ภาษาอังกฤษพื้นฐาน", teacher: "ครูรัชนีกร", room: "ห้องเรียนปกติ" },
+                    { type: "subject", period: "คาบที่ 7 (14.30 - 15.20 น.)", code: "ว33102", name: "เคมี", teacher: "ครูสุธีรา", room: "ห้องเรียนปกติ" },
+                    { type: "activity", period: "คาบที่ 8 (15.20 - 16.10 น.)", code: "กิจกรรม", name: "อบรมคุณธรรม", teacher: "-", room: "ตามกำหนดการโรงเรียน" }
+                ]
+            },
+            "อังคาร": {
+                name: "วันอังคาร",
+                en: "Tuesday",
+                colorClass: "bg-pink-50 text-pink-900 border-pink-200",
+                activeTabClass: "bg-pink-400 text-pink-950 shadow-sm border-pink-500",
+                badgeClass: "bg-pink-100 text-pink-800 border-pink-300",
+                items: [
+                    { type: "subject", period: "คาบที่ 1 (08.20 - 09.10 น.)", code: "ส33102", name: "สังคมศึกษาพื้นฐาน", teacher: "ครูอิษฎาภรณ์", room: "ห้องเรียนปกติ" },
+                    { type: "subject", period: "คาบที่ 2 (09.10 - 10.00 น.)", code: "ศ33102", name: "ดนตรี นาฏศิลป์", teacher: "ครูวสันต์", room: "ห้องเรียนปกติ" },
+                    { type: "break", title: "พัก 20 นาที", time: "10.00 - 10.20 น.", icon: "🧃", color: "purple" },
+                    { type: "subject", period: "คาบที่ 3 (10.20 - 11.10 น.)", code: "อ33102", name: "ภาษาอังกฤษพื้นฐาน", teacher: "ครูรัชนีกร", room: "ห้องเรียนปกติ" },
+                    { type: "subject", period: "คาบที่ 4 (11.10 - 12.00 น.)", code: "ค33206", name: "คณิตศาสตร์เพิ่มเติม", teacher: "ครูนพพล", room: "ห้องเรียนปกติ" },
+                    { type: "break", title: "พักกลางวัน 50 นาที", time: "12.00 - 12.50 น.", icon: "🍱", color: "rose" },
+                    { type: "subject", period: "คาบที่ 5 - 6 (12.50 - 14.30 น.)", code: "ว33103", name: "ชีวะ", teacher: "ครูนริลญา", room: "ห้อง Lab 327", isDouble: true },
+                    { type: "subject", period: "คาบที่ 7 (14.30 - 15.20 น.)", code: "ส33206", name: "สังคมศึกษาเพิ่มเติม", teacher: "ครูศุวัชรกัณต์", room: "ห้องเรียนปกติ" },
+                    { type: "free", period: "คาบที่ 8 (15.20 - 16.10 น.)", code: "-", name: "คาบอิสระ", teacher: "-", room: "ตามอัธยาศัย" }
+                ]
+            },
+            "พุธ": {
+                name: "วันพุธ",
+                en: "Wednesday",
+                colorClass: "bg-emerald-50 text-emerald-900 border-emerald-200",
+                activeTabClass: "bg-emerald-400 text-emerald-950 shadow-sm border-emerald-500",
+                badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-300",
+                items: [
+                    { type: "subject", period: "คาบที่ 1 - 2 (08.20 - 10.00 น.)", code: "ว33101", name: "ฟิสิกส์", teacher: "ครูมนตรี", room: "ห้องเรียนปกติ", isDouble: true },
+                    { type: "break", title: "พัก 20 นาที", time: "10.00 - 10.20 น.", icon: "🧃", color: "purple" },
+                    { type: "subject", period: "คาบที่ 3 - 4 (10.20 - 12.00 น.)", code: "ง33101", name: "การงานอาชีพพื้นฐาน", teacher: "ระบุว่า ครูย้าย", room: "ห้องเรียนปกติ", isDouble: true },
+                    { type: "break", title: "พักกลางวัน 50 นาที", time: "12.00 - 12.50 น.", icon: "🍱", color: "rose" },
+                    { type: "subject", period: "คาบที่ 5 (12.50 - 13.40 น.)", code: "ส33102", name: "สังคมศึกษาพื้นฐาน", teacher: "ครูอิษฎาภรณ์", room: "ห้องเรียนปกติ" },
+                    { type: "subject", period: "คาบที่ 6 (13.40 - 14.30 น.)", code: "อ33202", name: "ภาษาอังกฤษอ่าน-เขียน", teacher: "ครูปิยะวัฒน์", room: "ห้องเรียนปกติ" },
+                    { type: "subject", period: "คาบที่ 7 (14.30 - 15.20 น.)", code: "ค33206", name: "คณิตศาสตร์เพิ่มเติม", teacher: "ครูนพพล", room: "ห้องเรียนปกติ" },
+                    { type: "activity", period: "คาบที่ 8 (15.20 - 16.10 น.)", code: "กิจกรรม", name: "โฮมรูม", teacher: "-", room: "ห้องเรียนประจำ" }
+                ]
+            },
+            "พฤหัสบดี": {
+                name: "วันพฤหัสบดี",
+                en: "Thursday",
+                colorClass: "bg-orange-50 text-orange-900 border-orange-200",
+                activeTabClass: "bg-orange-400 text-orange-950 shadow-sm border-orange-500",
+                badgeClass: "bg-orange-100 text-orange-800 border-orange-300",
+                items: [
+                    { type: "subject", period: "คาบที่ 1 (08.20 - 09.10 น.)", code: "ว33101", name: "ฟิสิกส์", teacher: "ครูมนตรี", room: "ห้องเรียนปกติ" },
+                    { type: "subject", period: "คาบที่ 2 (09.10 - 10.00 น.)", code: "ค33206", name: "คณิตศาสตร์เพิ่มเติม", teacher: "ครูนพพล", room: "ห้องเรียนปกติ" },
+                    { type: "break", title: "พัก 20 นาที", time: "10.00 - 10.20 น.", icon: "🧃", color: "purple" },
+                    { type: "subject", period: "คาบที่ 3 (10.20 - 11.10 น.)", code: "ส33202", name: "สังคมศึกษาเพิ่มเติม", teacher: "ครูวาสนา", room: "ห้องเรียนปกติ" },
+                    { type: "subject", period: "คาบที่ 4 (11.10 - 12.00 น.)", code: "พ33102", name: "สุขศึกษาและพลศึกษา", teacher: "ครูภานุวัฒน์", room: "ห้องเรียนปกติ / สนาม" },
+                    { type: "break", title: "พักกลางวัน 50 นาที", time: "12.00 - 12.50 น.", icon: "🍱", color: "rose" },
+                    { type: "subject", period: "คาบที่ 5 - 6 (12.50 - 14.30 น.)", code: "ว33102", name: "เคมี", teacher: "ครูสุธีรา", room: "ห้อง Lab 325", isDouble: true },
+                    { type: "subject", period: "คาบที่ 7 (14.30 - 15.20 น.)", code: "ท33102", name: "ภาษาไทยพื้นฐาน", teacher: "ครูจินตนา", room: "ห้องเรียนปกติ" },
+                    { type: "activity", period: "คาบที่ 8 (15.20 - 16.10 น.)", code: "กิจกรรมพัฒนาผู้เรียน", name: "แนะแนว", teacher: "ครูจิรภัทร์", room: "ห้องเรียนปกติ" }
+                ]
+            },
+            "ศุกร์": {
+                name: "วันศุกร์",
+                en: "Friday",
+                colorClass: "bg-sky-50 text-sky-900 border-sky-200",
+                activeTabClass: "bg-sky-400 text-sky-950 shadow-sm border-sky-500",
+                badgeClass: "bg-sky-100 text-sky-800 border-sky-300",
+                items: [
+                    { type: "subject", period: "คาบที่ 1 (08.20 - 09.10 น.)", code: "ค33106", name: "คณิตศาสตร์พื้นฐาน", teacher: "ครูจินตนา", room: "ห้องเรียนปกติ" },
+                    { type: "subject", period: "คาบที่ 2 (09.10 - 10.00 น.)", code: "ท33102", name: "ภาษาไทยพื้นฐาน", teacher: "ครูจินตนา", room: "ห้องเรียนปกติ" },
+                    { type: "break", title: "พัก 20 นาที", time: "10.00 - 10.20 น.", icon: "🧃", color: "purple" },
+                    { type: "subject", period: "คาบที่ 3 (10.20 - 11.10 น.)", code: "ว33101", name: "ฟิสิกส์", teacher: "ครูมนตรี", room: "ห้องเรียนปกติ" },
+                    { type: "subject", period: "คาบที่ 4 (11.10 - 12.00 น.)", code: "ค33206", name: "คณิตศาสตร์เพิ่มเติม", teacher: "ครูนพพล", room: "ห้องเรียนปกติ" },
+                    { type: "break", title: "พักกลางวัน 50 นาที", time: "12.00 - 12.50 น.", icon: "🍱", color: "rose" },
+                    { type: "activity", period: "คาบที่ 5 (12.50 - 13.40 น.)", code: "กิจกรรมพัฒนาผู้เรียน", name: "กิจกรรมชุมนุม", teacher: "-", room: "ตามชุมนุมที่ลงทะเบียน" },
+                    { type: "free", period: "คาบที่ 6 - 8 (13.40 - 16.10 น.)", code: "-", name: "คาบอิสระ (3 คาบ)", teacher: "-", room: "ตามอัธยาศัย" }
+                ]
+            }
+        };
+
+        let currentActiveDay = "จันทร์";
+
+        // ฟังก์ชันสลับมุมมอง
+        function switchView(mode) {
+            const tableView = document.getElementById('tableView');
+            const dailyView = document.getElementById('dailyView');
+
+            const mBtnTable = document.getElementById('mobileBtnTable');
+            const mBtnDaily = document.getElementById('mobileBtnDaily');
+            const dBtnTable = document.getElementById('desktopBtnTable');
+            const dBtnDaily = document.getElementById('desktopBtnDaily');
+
+            if (mode === 'daily') {
+                document.body.classList.add('daily-mode');
+                tableView.classList.add('hidden');
+                dailyView.classList.remove('hidden');
+
+                mBtnTable.className = "px-2.5 py-1.5 rounded-lg transition text-slate-600";
+                mBtnDaily.className = "px-2.5 py-1.5 rounded-lg transition bg-white text-indigo-700 shadow-xs";
+
+                dBtnTable.className = "px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900";
+                dBtnDaily.className = "px-3 py-1.5 rounded-lg transition bg-indigo-600 text-white shadow-xs";
+
+                renderDailyCards(currentActiveDay);
+            } else {
+                document.body.classList.remove('daily-mode');
+                dailyView.classList.add('hidden');
+                tableView.classList.remove('hidden');
+
+                mBtnTable.className = "px-2.5 py-1.5 rounded-lg transition bg-white text-indigo-700 shadow-xs";
+                mBtnDaily.className = "px-2.5 py-1.5 rounded-lg transition text-slate-600";
+
+                dBtnTable.className = "px-3 py-1.5 rounded-lg transition bg-indigo-600 text-white shadow-xs";
+                dBtnDaily.className = "px-3 py-1.5 rounded-lg transition text-slate-600 hover:text-slate-900";
+            }
+        }
+
+        // ฟังก์ชันเลื่อนไปยังวันก่อนหน้า / ถัดไป
+        function prevDay() {
+            const idx = dayOrder.indexOf(currentActiveDay);
+            if (idx > 0) {
+                selectDailyTab(dayOrder[idx - 1]);
+            } else {
+                selectDailyTab(dayOrder[dayOrder.length - 1]); // วนกลับไปวันศุกร์
+            }
+        }
+
+        function nextDay() {
+            const idx = dayOrder.indexOf(currentActiveDay);
+            if (idx < dayOrder.length - 1) {
+                selectDailyTab(dayOrder[idx + 1]);
+            } else {
+                selectDailyTab(dayOrder[0]); // วนกลับไปวันจันทร์
+            }
+        }
+
+        // ฟังก์ชันเลือกแท็บวัน
+        function selectDailyTab(dayKey) {
+            currentActiveDay = dayKey;
+            renderDailyCards(dayKey);
+
+            // เลื่อนแท็บที่เลือกมาตรงกลางให้อัตโนมัติ (กรณีหน้าจอเล็ก)
+            const dayTabs = {
+                "จันทร์": "tab-mon",
+                "อังคาร": "tab-tue",
+                "พุธ": "tab-wed",
+                "พฤหัสบดี": "tab-thu",
+                "ศุกร์": "tab-fri"
+            };
+            const activeBtn = document.getElementById(dayTabs[dayKey]);
+            if (activeBtn) {
+                activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+
+        let dailySimulatedMins = null; // null = ใช้เวลาจริง
+        let liveTimerInterval = null;
+
+        // สลับเวลาจำลอง หรือใช้เวลาจริง
+        function setDailySimTime(hours, mins, label, btnEl) {
+            if (hours === null) {
+                dailySimulatedMins = null;
+                document.getElementById('simTimeLabel').textContent = 'ตามเวลาจริง';
+            } else {
+                dailySimulatedMins = hours * 60 + mins;
+                document.getElementById('simTimeLabel').textContent = label;
+            }
+
+            document.querySelectorAll('.btn-sim').forEach(btn => {
+                btn.className = "btn-sim text-[11px] px-2.5 py-1 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-medium transition active:scale-95 text-slate-700";
+            });
+            const activeTarget = btnEl || (typeof event !== 'undefined' && event && event.target ? event.target.closest('.btn-sim') : null) || (hours === null ? document.getElementById('btnSimReal') : null);
+            if (activeTarget) {
+                activeTarget.className = "btn-sim text-[11px] px-2.5 py-1 rounded-xl bg-indigo-600 text-white font-semibold transition active:scale-95 shadow-2xs";
+            }
+
+            renderDailyCards(currentActiveDay);
+        }
+
+        // ==========================================
+        // ฐานข้อมูล 4 แผนตารางเวลาเรียน (Srisawat Next)
+        // ==========================================
+        const bellPlans = {
+            plan1: {
+                id: "plan1",
+                name: "แผนที่ 1: เวลาเรียนปกติ",
+                shortName: "แผน 1 ปกติ",
+                desc: "คาบละ 50 นาที (08.20 - 16.10 น.)",
+                periods: {
+                    1: { start: 500, end: 550, timeStr: "08.20 - 09.10 น." },
+                    2: { start: 550, end: 600, timeStr: "09.10 - 10.00 น." },
+                    break1: { start: 600, end: 620, timeStr: "10.00 - 10.20 น.", title: "พัก 20 นาที", icon: "🧃" },
+                    3: { start: 620, end: 670, timeStr: "10.20 - 11.10 น." },
+                    4: { start: 670, end: 720, timeStr: "11.10 - 12.00 น." },
+                    lunch: { start: 720, end: 770, timeStr: "12.00 - 12.50 น.", title: "พักกลางวัน 50 นาที", icon: "🍱" },
+                    5: { start: 770, end: 820, timeStr: "12.50 - 13.40 น." },
+                    6: { start: 820, end: 870, timeStr: "13.40 - 14.30 น." },
+                    7: { start: 870, end: 920, timeStr: "14.30 - 15.20 น." },
+                    8: { start: 920, end: 970, timeStr: "15.20 - 16.10 น." }
+                }
+            },
+            plan2: {
+                id: "plan2",
+                name: "แผนที่ 2: ประชุมหลังเลิกเรียน",
+                shortName: "แผน 2 ประชุมท้ายวัน",
+                desc: "คาบละ 45 นาที / เลิกเรียน 15.10 น.",
+                periods: {
+                    1: { start: 480, end: 525, timeStr: "08.00 - 08.45 น." },
+                    2: { start: 525, end: 570, timeStr: "08.45 - 09.30 น." },
+                    break1: { start: 570, end: 590, timeStr: "09.30 - 09.50 น.", title: "พัก 20 นาที", icon: "🧃" },
+                    3: { start: 590, end: 635, timeStr: "09.50 - 10.35 น." },
+                    4: { start: 635, end: 680, timeStr: "10.35 - 11.20 น." },
+                    lunch: { start: 680, end: 730, timeStr: "11.20 - 12.10 น.", title: "พักกลางวัน 50 นาที", icon: "🍱" },
+                    5: { start: 730, end: 775, timeStr: "12.10 - 12.55 น." },
+                    6: { start: 775, end: 820, timeStr: "12.55 - 13.40 น." },
+                    7: { start: 820, end: 865, timeStr: "13.40 - 14.25 น." },
+                    8: { start: 865, end: 910, timeStr: "14.25 - 15.10 น." }
+                }
+            },
+            plan3: {
+                id: "plan3",
+                name: "แผนที่ 3: ประชุมหลังประกอบพิธี",
+                shortName: "แผน 3 ประชุมเช้า",
+                desc: "เริ่มเรียนคาบ 1 ตอน 08.45 น.",
+                periods: {
+                    1: { start: 525, end: 570, timeStr: "08.45 - 09.30 น." },
+                    2: { start: 570, end: 615, timeStr: "09.30 - 10.15 น." },
+                    break1: { start: 615, end: 635, timeStr: "10.15 - 10.35 น.", title: "พัก 20 นาที", icon: "🧃" },
+                    3: { start: 635, end: 680, timeStr: "10.35 - 11.20 น." },
+                    4: { start: 680, end: 725, timeStr: "11.20 - 12.05 น." },
+                    lunch: { start: 725, end: 775, timeStr: "12.05 - 12.55 น.", title: "พักกลางวัน 50 นาที", icon: "🍱" },
+                    5: { start: 775, end: 820, timeStr: "12.55 - 13.40 น." },
+                    6: { start: 820, end: 865, timeStr: "13.40 - 14.25 น." },
+                    7: { start: 865, end: 910, timeStr: "14.25 - 15.10 น." },
+                    8: { start: 910, end: 960, timeStr: "15.10 - 16.00 น." }
+                }
+            },
+            plan4: {
+                id: "plan4",
+                name: "แผนที่ 4: กิจกรรมช่วงพักเที่ยง",
+                shortName: "แผน 4 พักเที่ยงยาว",
+                desc: "พักเที่ยง 1 ชม. 50 นาที (11.20 - 13.10 น.)",
+                periods: {
+                    1: { start: 480, end: 525, timeStr: "08.00 - 08.45 น." },
+                    2: { start: 525, end: 570, timeStr: "08.45 - 09.30 น." },
+                    break1: { start: 570, end: 590, timeStr: "09.30 - 09.50 น.", title: "พัก 20 นาที", icon: "🧃" },
+                    3: { start: 590, end: 635, timeStr: "09.50 - 10.35 น." },
+                    4: { start: 635, end: 680, timeStr: "10.35 - 11.20 น." },
+                    lunch: { start: 680, end: 790, timeStr: "11.20 - 13.10 น.", title: "พักเที่ยง/กิจกรรม", icon: "🍱" },
+                    5: { start: 790, end: 835, timeStr: "13.10 - 13.55 น." },
+                    6: { start: 835, end: 880, timeStr: "13.55 - 14.40 น." },
+                    7: { start: 880, end: 925, timeStr: "14.40 - 15.25 น." },
+                    8: { start: 925, end: 970, timeStr: "15.25 - 16.10 น." }
+                }
+            }
+        };
+
+        let currentBellPlan = 'plan1';
+
+        function getTodayDateString() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
+
+        // โหลดแผนที่บันทึกไว้ พร้อมระบบรีเซ็ตอัตโนมัติเมื่อขึ้นวันใหม่
+        function initBellPlan() {
+            try {
+                const today = getTodayDateString();
+                const savedDate = localStorage.getItem('tarang69_plan_date');
+                const savedPlan = localStorage.getItem('tarang69_plan_key');
+
+                if (savedDate === today && savedPlan && bellPlans[savedPlan]) {
+                    currentBellPlan = savedPlan;
+                } else {
+                    currentBellPlan = 'plan1';
+                    localStorage.setItem('tarang69_plan_date', today);
+                    localStorage.setItem('tarang69_plan_key', 'plan1');
+                }
+            } catch (e) {
+                currentBellPlan = 'plan1';
+            }
+            updatePlanSelectorUI();
+        }
+
+        // สลับแผนเวลาเรียน
+        function setBellPlan(planKey) {
+            if (!bellPlans[planKey]) return;
+            currentBellPlan = planKey;
+            try {
+                const today = getTodayDateString();
+                localStorage.setItem('tarang69_plan_date', today);
+                localStorage.setItem('tarang69_plan_key', planKey);
+            } catch (e) {}
+            updatePlanSelectorUI();
+            renderDailyCards(currentActiveDay);
+        }
+
+        // เปิด Bottom Sheet สำหรับเลือกแผน
+        function openPlanBottomSheet() {
+            const modal = document.getElementById('planBottomSheetModal');
+            const backdrop = document.getElementById('bottomSheetBackdrop');
+            const sheet = document.getElementById('planBottomSheet');
+            if (!modal) return;
+            updatePlanSelectorUI();
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                if (backdrop) {
+                    backdrop.classList.remove('opacity-0');
+                    backdrop.classList.add('opacity-100');
+                }
+                if (sheet) {
+                    sheet.classList.remove('translate-y-full');
+                    sheet.classList.add('translate-y-0');
+                }
+            });
+        }
+
+        // ปิด Bottom Sheet
+        function closePlanBottomSheet() {
+            const modal = document.getElementById('planBottomSheetModal');
+            const backdrop = document.getElementById('bottomSheetBackdrop');
+            const sheet = document.getElementById('planBottomSheet');
+            if (!modal) return;
+            if (backdrop) {
+                backdrop.classList.remove('opacity-100');
+                backdrop.classList.add('opacity-0');
+            }
+            if (sheet) {
+                sheet.classList.remove('translate-y-0');
+                sheet.classList.add('translate-y-full');
+            }
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 250);
+        }
+
+        function selectPlanFromSheet(planKey) {
+            setBellPlan(planKey);
+            closePlanBottomSheet();
+        }
+
+        // อัปเดตสไตล์ปุ่มเลือกแผนในหน้าจอ
+        function updatePlanSelectorUI() {
+            const plan = bellPlans[currentBellPlan] || bellPlans.plan1;
+            const compactLabel = document.getElementById('compactPlanLabel');
+            if (compactLabel) compactLabel.textContent = plan.shortName || plan.name;
+
+            ['plan1', 'plan2', 'plan3', 'plan4'].forEach(key => {
+                const btn = document.getElementById(`plan-btn-${key}`);
+                if (btn) {
+                    if (key === currentBellPlan) {
+                        btn.className = "plan-pill px-2.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs bg-indigo-600 text-white border border-indigo-600 scale-[1.02] text-center";
+                    } else {
+                        btn.className = "plan-pill px-2.5 py-2 rounded-xl text-xs font-medium transition-all bg-white/90 hover:bg-slate-100 text-slate-700 border border-slate-200/80 text-center";
+                    }
+                }
+
+                const sheetBtn = document.getElementById(`sheet-plan-btn-${key}`);
+                if (sheetBtn) {
+                    const checkIcon = sheetBtn.querySelector ? sheetBtn.querySelector('.plan-check-icon') : null;
+                    if (key === currentBellPlan) {
+                        sheetBtn.className = "w-full text-left p-3 rounded-2xl border-2 border-indigo-600 bg-indigo-50/70 transition-all flex items-center justify-between shadow-2xs cursor-pointer";
+                        if (checkIcon) checkIcon.classList.remove('hidden');
+                    } else {
+                        sheetBtn.className = "w-full text-left p-3 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 transition-all flex items-center justify-between cursor-pointer";
+                        if (checkIcon) checkIcon.classList.add('hidden');
+                    }
+                }
+            });
+            const titleEl = document.getElementById('currentPlanTitle');
+            if (titleEl) titleEl.textContent = plan.name;
+            const descEl = document.getElementById('currentPlanDesc');
+            if (descEl) descEl.textContent = `(${plan.desc})`;
+        }
+
+        // คืนค่าช่วงเวลาเป็นนาทีสำหรับแต่ละคาบ ตามแผนเวลาที่กำลังใช้งาน
+        function getPeriodTimeRange(item) {
+            const plan = bellPlans[currentBellPlan] || bellPlans.plan1;
+            const periods = plan.periods;
+
+            if (item.type === 'break') {
+                if (item.title && (item.title.includes('20') || item.title.includes('สาย'))) {
+                    const b1 = periods.break1;
+                    return { start: b1.start, end: b1.end, timeStr: b1.timeStr, count: 0, label: item.icon || '🧃' };
+                }
+                const lunch = periods.lunch;
+                return { start: lunch.start, end: lunch.end, timeStr: lunch.timeStr, count: 0, label: item.icon || '🍱' };
+            }
+
+            const p = item.period || '';
+            const m = p.match(/คาบที่\s*(\d+)(?:\s*-\s*(\d+))?/);
+            if (!m) return { start: periods[1].start, end: periods[8].end, timeStr: '', count: 1, label: '1' };
+            const p1 = parseInt(m[1], 10);
+            const p2 = m[2] ? parseInt(m[2], 10) : p1;
+            const count = p2 - p1 + 1;
+            const label = (p1 === p2) ? `${p1}` : `${p1}-${p2}`;
+
+            if (periods[p1] && periods[p2]) {
+                const start = periods[p1].start;
+                const end = periods[p2].end;
+                const startTimeStr = periods[p1].timeStr.split(' - ')[0];
+                const endTimeStr = periods[p2].timeStr.split(' - ')[1];
+                return { start, end, timeStr: `${startTimeStr} - ${endTimeStr}`, count, label };
+            }
+            return { start: periods[1].start, end: periods[8].end, timeStr: '', count: 1, label: '1' };
+        }
+
+        // คำนวณสถานะคาบเรียนปัจจุบันและคาบถัดไป (Now & Next State)
+        function computeNowNextState(dayKey, currentTotalMins, currentSeconds) {
+            const data = scheduleData[dayKey];
+            if (!data || !data.items || data.items.length === 0) return null;
+
+            if (currentTotalMins === undefined || currentTotalMins === null) {
+                if (dailySimulatedMins !== null) {
+                    currentTotalMins = dailySimulatedMins;
+                    currentSeconds = 0;
+                } else {
+                    const now = new Date();
+                    currentTotalMins = now.getHours() * 60 + now.getMinutes();
+                    currentSeconds = now.getSeconds();
+                }
+            }
+            if (currentSeconds === undefined || currentSeconds === null) {
+                currentSeconds = 0;
+            }
+
+            const itemsWithTime = data.items.map((item, idx) => {
+                return { item, timeInfo: getPeriodTimeRange(item), index: idx };
+            });
+
+            const firstItem = itemsWithTime[0];
+            const lastItem = itemsWithTime[itemsWithTime.length - 1];
+
+            // 1. ก่อนเริ่มเข้าเรียน
+            if (currentTotalMins < firstItem.timeInfo.start) {
+                const remainingSecs = (firstItem.timeInfo.start * 60) - (currentTotalMins * 60 + currentSeconds);
+                return {
+                    status: 'before_school',
+                    currentItem: null,
+                    currentTimeInfo: null,
+                    nextItem: firstItem.item,
+                    nextTimeInfo: firstItem.timeInfo,
+                    remainingSecs: remainingSecs
+                };
+            }
+
+            // 2. หลังเลิกเรียนของวัน
+            if (currentTotalMins >= lastItem.timeInfo.end) {
+                return {
+                    status: 'after_school',
+                    currentItem: null,
+                    currentTimeInfo: null,
+                    nextItem: null,
+                    nextTimeInfo: null,
+                    remainingSecs: 0
+                };
+            }
+
+            // 3. กำลังอยู่ในช่วงเรียนหรือช่วงพัก
+            for (let i = 0; i < itemsWithTime.length; i++) {
+                const curr = itemsWithTime[i];
+                if (currentTotalMins >= curr.timeInfo.start && currentTotalMins < curr.timeInfo.end) {
+                    const next = itemsWithTime[i + 1] ? itemsWithTime[i + 1] : null;
+                    const remainingSecs = (curr.timeInfo.end * 60) - (currentTotalMins * 60 + currentSeconds);
+                    return {
+                        status: 'in_progress',
+                        currentItem: curr.item,
+                        currentTimeInfo: curr.timeInfo,
+                        nextItem: next ? next.item : null,
+                        nextTimeInfo: next ? next.timeInfo : null,
+                        remainingSecs: remainingSecs
+                    };
+                }
+            }
+
+            // 4. กรณีระหว่างรอยต่อคาบ (ก่อนคาบถัดไป)
+            for (let i = 0; i < itemsWithTime.length; i++) {
+                const curr = itemsWithTime[i];
+                if (currentTotalMins < curr.timeInfo.start) {
+                    const remainingSecs = (curr.timeInfo.start * 60) - (currentTotalMins * 60 + currentSeconds);
+                    return {
+                        status: 'before_school',
+                        currentItem: null,
+                        currentTimeInfo: null,
+                        nextItem: curr.item,
+                        nextTimeInfo: curr.timeInfo,
+                        remainingSecs: remainingSecs
+                    };
+                }
+            }
+
+            return null;
+        }
+
+        // อัปเดตแบนเนอร์ Now & Next ไฮไลท์คาบปัจจุบันและถัดไป
+        function updateNowNextBanner(dayKey) {
+            const banner = document.getElementById('nowNextBanner');
+            if (!banner) return;
+
+            const state = computeNowNextState(dayKey);
+            if (!state) {
+                banner.innerHTML = '';
+                return;
+            }
+
+            if (state.status === 'before_school') {
+                const next = state.nextItem;
+                const nextTime = state.nextTimeInfo ? state.nextTimeInfo.timeStr.split(' - ')[0] : '';
+                const nextName = next.name || next.title || 'คาบแรก';
+                const nextCode = next.code && next.code !== '-' ? `(${next.code})` : '';
+                const remMins = Math.max(1, Math.round(state.remainingSecs / 60));
+                banner.innerHTML = `
+                    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 text-white p-3.5 shadow-md">
+                        <div class="flex items-center justify-between gap-2 mb-1.5">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-xs">
+                                <span>☀️</span> เตรียมตัวเข้าเรียน
+                            </span>
+                            <span class="text-xs font-mono font-bold bg-black/20 px-2 py-0.5 rounded-md">
+                                เริ่มในอีก ~${remMins} นาที
+                            </span>
+                        </div>
+                        <div class="font-bold text-base sm:text-lg tracking-tight">
+                            คาบแรก: ${nextName} ${nextCode}
+                        </div>
+                        <div class="text-xs text-indigo-100/90 mt-1 flex items-center gap-2">
+                            <span>🕒 เริ่มเวลา ${nextTime} น.</span>
+                            ${next.room && next.room !== 'ห้องเรียนปกติ' && next.room !== 'ตามอัธยาศัย' && next.room !== '-' ? `<span>• 📍 ${next.room}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            } else if (state.status === 'in_progress') {
+                const cur = state.currentItem;
+                const curTime = state.currentTimeInfo;
+                const curName = cur.name || cur.title || 'กิจกรรม';
+                const curCode = cur.code && cur.code !== '-' ? `<span class="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-white/20 ml-1.5">${cur.code}</span>` : '';
+                const remH = String(Math.floor(state.remainingSecs / 3600)).padStart(2, '0');
+                const remM = String(Math.floor((state.remainingSecs % 3600) / 60)).padStart(2, '0');
+                const remS = String(state.remainingSecs % 60).padStart(2, '0');
+                const countdownStr = state.remainingSecs >= 3600 ? `${remH}:${remM}:${remS}` : `${remM}:${remS}`;
+
+                let nextText = '';
+                if (state.nextItem) {
+                    const n = state.nextItem;
+                    const nName = n.name || n.title;
+                    const nStart = state.nextTimeInfo ? state.nextTimeInfo.timeStr.split(' - ')[0] : '';
+                    const nRoom = n.room && n.room !== 'ห้องเรียนปกติ' && n.room !== 'ตามอัธยาศัย' && n.room !== '-' ? ` (📍 ${n.room})` : '';
+                    nextText = `
+                        <div class="mt-2.5 pt-2 border-t border-white/15 flex items-center justify-between text-xs text-indigo-100 flex-wrap gap-1">
+                            <span class="flex items-center gap-1">
+                                <span class="text-indigo-200">คาบต่อไป:</span>
+                                <strong class="text-white">${nName}</strong>${nRoom}
+                            </span>
+                            <span class="text-[11px] opacity-80">เริ่ม ${nStart} น.</span>
+                        </div>
+                    `;
+                } else {
+                    nextText = `
+                        <div class="mt-2.5 pt-2 border-t border-white/15 text-xs text-indigo-100">
+                            <span>✨ คาบสุดท้ายของวันนี้แล้ว</span>
+                        </div>
+                    `;
+                }
+
+                const isBreak = cur.type === 'break';
+                const badgeLabel = isBreak ? (cur.title || 'ช่วงพัก') : `คาบที่ ${curTime ? curTime.label : ''}`;
+                const roomBadge = cur.room && cur.room !== 'ห้องเรียนปกติ' && cur.room !== 'ตามอัธยาศัย' && cur.room !== '-'
+                    ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-amber-400 text-amber-950 ml-2">📍 ${cur.room}</span>`
+                    : '';
+
+                banner.innerHTML = `
+                    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 text-white p-3.5 shadow-md">
+                        <div class="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                            <div class="flex items-center gap-1.5">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500 text-white shadow-2xs">
+                                    <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                                    กำลังเรียน • ${badgeLabel}
+                                </span>
+                                ${roomBadge}
+                            </div>
+                            <span class="inline-flex items-center gap-1 text-xs font-mono font-bold bg-black/25 px-2.5 py-1 rounded-lg border border-white/10 shadow-2xs">
+                                <span>⏱️</span>
+                                <span>เหลือ</span>
+                                <span id="bannerCountdown" class="text-emerald-300 font-bold">${countdownStr}</span>
+                                <span>นาที</span>
+                            </span>
+                        </div>
+                        <div class="font-bold text-base sm:text-lg tracking-tight flex items-center flex-wrap">
+                            <span>${curName}</span>
+                            ${curCode}
+                        </div>
+                        ${nextText}
+                    </div>
+                `;
+            } else if (state.status === 'after_school') {
+                banner.innerHTML = `
+                    <div class="rounded-2xl bg-slate-800 text-white p-3.5 shadow-sm text-center">
+                        <div class="text-sm font-bold flex items-center justify-center gap-1.5">
+                            <span>🎉</span>
+                            <span>หมดคาบเรียนของวันนี้แล้ว!</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mt-1">พักผ่อนให้เต็มที่ หรือทบทวนบทเรียนสำหรับวันพรุ่งนี้</p>
+                    </div>
+                `;
+            }
+        }
+
+        let hasAutoScrolled = false;
+
+        // เลื่อนหน้าจอลงมาโฟกัสที่คาบที่กำลังเรียนอยู่ หรือคาบถัดไปโดยอัตโนมัติ
+        function autoScrollToActivePeriod() {
+            const dailyView = document.getElementById('dailyView');
+            if (!dailyView || !dailyView.classList || typeof dailyView.classList.contains !== 'function' || dailyView.classList.contains('hidden')) return;
+            if (typeof document.querySelector !== 'function') return;
+
+            const activeEl = document.querySelector('.timeline-row-active') || document.querySelector('[data-status="in_progress"]');
+            if (activeEl && typeof activeEl.scrollIntoView === 'function') {
+                setTimeout(() => {
+                    activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 150);
+                return;
+            }
+
+            const pendingEl = document.querySelector('[data-status="pending"]');
+            if (pendingEl && typeof pendingEl.scrollIntoView === 'function') {
+                setTimeout(() => {
+                    pendingEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 150);
+            }
+        }
+
+        // ฟังก์ชันเรนเดอร์ Timeline Progress Tracker ประจำวัน
+        function renderDailyCards(dayKey, triggerFade = true) {
+            const data = scheduleData[dayKey];
+            if (!data) return;
+
+            const dayTabs = {
+                "จันทร์": "tab-mon",
+                "อังคาร": "tab-tue",
+                "พุธ": "tab-wed",
+                "พฤหัสบดี": "tab-thu",
+                "ศุกร์": "tab-fri"
+            };
+
+            for (const [k, id] of Object.entries(dayTabs)) {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    if (k === dayKey) {
+                        btn.className = `daily-tab-btn flex-1 min-w-[68px] py-2 px-2.5 rounded-2xl text-xs sm:text-sm font-bold transition flex flex-col items-center justify-center border ${data.activeTabClass}`;
+                    } else {
+                        btn.className = "daily-tab-btn flex-1 min-w-[68px] py-2 px-2.5 rounded-2xl text-xs sm:text-sm font-bold transition flex flex-col items-center justify-center border border-slate-200/80 bg-white/80 text-slate-600 hover:bg-slate-50";
+                    }
+                }
+            }
+
+            document.getElementById('dailyHeaderTitle').textContent = data.name;
+            document.getElementById('dailyHeaderSub').textContent = `${data.en} • Timeline คาบเรียน`;
+
+            const dayIndex = new Date().getDay();
+            const dayIndexMap = { 1: "จันทร์", 2: "อังคาร", 3: "พุธ", 4: "พฤหัสบดี", 5: "ศุกร์" };
+            const isToday = (dayIndexMap[dayIndex] === dayKey);
+            const todayBadge = document.getElementById('dailyTodayBadge');
+            if (todayBadge) {
+                if (isToday) {
+                    todayBadge.classList.remove('hidden');
+                } else {
+                    todayBadge.classList.add('hidden');
+                }
+            }
+
+            // คำนวณเวลาสำหรับเปรียบเทียบสถานะ
+            let currentTotalMins = 0;
+            let currentSeconds = 0;
+            if (dailySimulatedMins !== null) {
+                currentTotalMins = dailySimulatedMins;
+                currentSeconds = 0;
+            } else {
+                const now = new Date();
+                currentTotalMins = now.getHours() * 60 + now.getMinutes();
+                currentSeconds = now.getSeconds();
+            }
+
+            // อัปเดตแบนเนอร์ Now & Next
+            updateNowNextBanner(dayKey);
+
+            const container = document.getElementById('dailyPeriodsList');
+            container.innerHTML = '';
+            container.className = triggerFade ? "space-y-0 animate-card-fade" : "space-y-0";
+
+            const currentKeyword = document.getElementById('highlightFilter').value;
+
+            let completedPeriodsCount = 0;
+            const totalPeriodsCount = 8; // ตารางเรียนนับ 8 คาบมาตรฐานตลอดทั้งวัน
+
+            data.items.forEach((item, index) => {
+                const isLast = (index === data.items.length - 1);
+                const timeInfo = getPeriodTimeRange(item);
+
+                let status = 'pending';
+                let remainingSecs = 0;
+
+                if (currentTotalMins >= timeInfo.end) {
+                    status = 'completed';
+                    if (item.type !== 'break') completedPeriodsCount += timeInfo.count;
+                } else if (currentTotalMins >= timeInfo.start && currentTotalMins < timeInfo.end) {
+                    status = 'in_progress';
+                    remainingSecs = (timeInfo.end * 60) - (currentTotalMins * 60 + currentSeconds);
+                } else {
+                    status = 'pending';
+                }
+
+                const remH = String(Math.floor(remainingSecs / 3600)).padStart(2, '0');
+                const remM = String(Math.floor((remainingSecs % 3600) / 60)).padStart(2, '0');
+                const remS = String(remainingSecs % 60).padStart(2, '0');
+                const countdownStr = remainingSecs >= 3600 ? `${remH}:${remM}:${remS}` : `${remM}:${remS}`;
+
+                const stepSymbol = timeInfo.label;
+
+                // แถว Node ใน Timeline
+                const row = document.createElement('div');
+                row.className = "relative flex items-start gap-3 sm:gap-4 group";
+                if (row.setAttribute) row.setAttribute('data-status', status);
+                if (status === 'in_progress') {
+                    row.classList.add('timeline-row-active');
+                }
+
+                // กิ่งเส้นแนวตั้งเชื่อมโยงขั้นตอน
+                let lineHtml = '';
+                if (!isLast) {
+                    const lineColor = (status === 'completed') ? 'bg-slate-800' : 'bg-slate-200';
+                    lineHtml = `<div class="absolute left-4 sm:left-4.5 top-9 bottom-[-4px] w-[2px] ${lineColor} -translate-x-1/2 transition-colors"></div>`;
+                }
+
+                // วงกลม Step Indicator
+                let circleHtml = '';
+                if (status === 'completed') {
+                    circleHtml = `
+                        <div class="relative z-10 flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-900 text-white shadow-2xs shrink-0 transition-transform group-hover:scale-105">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                    `;
+                } else if (status === 'in_progress') {
+                    // วงกลมสีเขียวเด่นเฉพาะวิชานี้ (Active Green Beacon)
+                    circleHtml = `
+                        <div class="relative z-10 flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border-2 border-emerald-500 text-emerald-700 font-extrabold text-xs sm:text-sm shrink-0 ring-4 ring-emerald-100 shadow-sm">
+                            <span>${stepSymbol}</span>
+                            <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping"></span>
+                        </div>
+                    `;
+                } else {
+                    if (item.type === 'break') {
+                        const isLunch = item.title && (item.title.includes('เที่ยง') || item.title.includes('50'));
+                        const breakColor = isLunch ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-purple-50 border-purple-200 text-purple-700';
+                        circleHtml = `
+                            <div class="relative z-10 flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full ${breakColor} border text-sm shrink-0">
+                                <span>${item.icon || '🧃'}</span>
+                            </div>
+                        `;
+                    } else {
+                        circleHtml = `
+                            <div class="relative z-10 flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border-2 border-slate-300 text-slate-500 font-extrabold text-xs sm:text-sm shrink-0">
+                                <span>${stepSymbol}</span>
+                            </div>
+                        `;
+                    }
+                }
+
+                // กรองคำค้นหา
+                if (currentKeyword !== 'all') {
+                    const textSearch = `${item.code || ''} ${item.name || item.title || ''} ${item.teacher || ''} ${item.room || ''}`;
+                    if (!textSearch.includes(currentKeyword)) {
+                        row.classList.add('dimmed');
+                    } else {
+                        row.classList.add('highlighted');
+                    }
+                }
+
+                const isRoomCustom = item.room && item.room !== 'ห้องเรียนปกติ' && item.room !== 'ตามอัธยาศัย' && item.room !== '-';
+
+                if (item.type === 'break') {
+                    const cardBg = (status === 'in_progress')
+                        ? 'bg-emerald-50/80 border-1.5 border-emerald-300 shadow-xs'
+                        : 'bg-white/90 border border-slate-200/80 shadow-2xs';
+                    const titleColor = (status === 'in_progress') ? 'text-emerald-950 font-bold' : 'text-slate-700 font-semibold';
+                    
+                    let timeColHtml = '';
+                    if (status === 'in_progress') {
+                        timeColHtml = `
+                            <div class="text-right">
+                                <div class="text-xs font-mono font-extrabold text-emerald-700">
+                                    เหลือ <span id="activeCountdownTimer" data-end-secs="${timeInfo.end * 60}">${countdownStr}</span> นาที
+                                </div>
+                                <div class="text-[10px] font-bold text-emerald-600">● กำลังพัก</div>
+                            </div>
+                        `;
+                    } else {
+                        timeColHtml = `<div class="text-xs font-semibold text-slate-500">${timeInfo.timeStr}</div>`;
+                    }
+
+                    const contentHtml = `
+                        <div class="flex-1 p-2.5 sm:p-3 mb-2.5 ${cardBg} rounded-xl flex items-center justify-between gap-2 transition">
+                            <div class="flex items-center gap-2">
+                                <span class="text-base">${item.icon || '🧃'}</span>
+                                <span class="text-xs sm:text-sm ${titleColor}">${item.title}</span>
+                            </div>
+                            ${timeColHtml}
+                        </div>
+                    `;
+                    row.innerHTML = lineHtml + circleHtml + contentHtml;
+                } else {
+                    row.onclick = () => openModal(data.name, 'คาบที่ ' + timeInfo.label + ' (' + timeInfo.timeStr + ')', item.code, item.name, item.teacher, item.room);
+                    row.classList.add('cursor-pointer');
+
+                    let cardClass = '';
+                    let nameHtml = '';
+                    let rightColHtml = '';
+
+                    if (status === 'completed') {
+                        cardClass = 'bg-slate-50/80 border border-slate-200/80 rounded-xl opacity-65 hover:opacity-100 shadow-2xs';
+                        nameHtml = `
+                            <div>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <h3 class="font-bold text-xs sm:text-sm text-slate-600 line-through">${item.name}</h3>
+                                    ${item.code !== '-' ? `<span class="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-200/80 text-slate-600">${item.code}</span>` : ''}
+                                    ${isRoomCustom ? `<span class="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-200">📍 ${item.room}</span>` : ''}
+                                </div>
+                                <div class="text-[11px] text-slate-400 mt-0.5">${item.teacher && item.teacher !== '-' ? `👨‍🏫 ${item.teacher}` : ''}</div>
+                            </div>
+                        `;
+                        rightColHtml = `<div class="text-xs font-semibold text-slate-400 shrink-0">${timeInfo.timeStr}</div>`;
+                    } else if (status === 'in_progress') {
+                        cardClass = 'bg-emerald-50/80 border-1.5 border-emerald-300 rounded-2xl shadow-xs hover:shadow-sm';
+                        nameHtml = `
+                            <div>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <h3 class="font-extrabold text-sm sm:text-base text-emerald-950">${item.name}</h3>
+                                    ${item.code !== '-' ? `<span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">${item.code}</span>` : ''}
+                                    ${isRoomCustom ? `<span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-200 text-amber-950 border border-amber-300 shadow-2xs">📍 ${item.room}</span>` : ''}
+                                </div>
+                                <div class="text-xs font-semibold text-emerald-700 mt-1 flex items-center gap-2">
+                                    <span>🕒 ${timeInfo.timeStr}</span>
+                                    ${item.teacher && item.teacher !== '-' ? `<span>• 👨‍🏫 ${item.teacher}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                        rightColHtml = `
+                            <div class="text-right shrink-0">
+                                <div class="text-xs sm:text-sm font-mono font-extrabold text-emerald-700">
+                                    เหลือ <span id="activeCountdownTimer" data-end-secs="${timeInfo.end * 60}">${countdownStr}</span>
+                                </div>
+                                <div class="text-[11px] font-bold text-emerald-600 flex items-center justify-end gap-1 mt-0.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    กำลังเรียน
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // Pending
+                        cardClass = 'bg-white border border-slate-200/90 rounded-xl hover:bg-slate-50 shadow-2xs';
+                        nameHtml = `
+                            <div>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <h3 class="font-bold text-xs sm:text-sm text-slate-800">${item.name}</h3>
+                                    ${item.code !== '-' ? `<span class="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">${item.code}</span>` : ''}
+                                    ${isRoomCustom ? `<span class="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-amber-50 text-amber-800 border border-amber-200">📍 ${item.room}</span>` : ''}
+                                </div>
+                                <div class="text-[11px] text-slate-400 mt-0.5">${item.teacher && item.teacher !== '-' ? `👨‍🏫 ${item.teacher}` : ''}</div>
+                            </div>
+                        `;
+                        rightColHtml = `<div class="text-xs font-semibold text-slate-500 shrink-0">${timeInfo.timeStr}</div>`;
+                    }
+
+                    const contentHtml = `
+                        <div class="flex-1 p-2.5 sm:p-3 mb-2.5 ${cardClass} flex items-center justify-between gap-2 transition">
+                            ${nameHtml}
+                            ${rightColHtml}
+                        </div>
+                    `;
+                    row.innerHTML = lineHtml + circleHtml + contentHtml;
+                }
+
+                container.appendChild(row);
+            });
+
+            // อัปเดต Progress Bar
+            const pct = totalPeriodsCount > 0 ? Math.round((completedPeriodsCount / totalPeriodsCount) * 100) : 0;
+            const bar = document.getElementById('dailyProgressBar');
+            if (bar) bar.style.width = `${pct}%`;
+            const pText = document.getElementById('dailyProgressPercent');
+            if (pText) pText.textContent = `${pct}%`;
+            const bBadge = document.getElementById('dailyProgressBadge');
+            if (bBadge) bBadge.textContent = `${completedPeriodsCount}/${totalPeriodsCount} คาบ (${pct}%)`;
+
+            // Auto-scroll หากเป็นการสลับหน้า/วัน
+            if (triggerFade) {
+                autoScrollToActivePeriod();
+            }
+        }
+
+        // ระบบ Gesture ปัดนิ้วซ้าย-ขวา เพื่อเปลี่ยนวัน (Touch Swipe)
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        const swipeArea = document.getElementById('dailySwipeArea');
+        swipeArea.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        swipeArea.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+            // ตรวจสอบว่าเป็นการปัดแนวนอนชัดเจน (ไม่รบกวนการเลื่อนหน้าจอขึ้น-ลง)
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
+                if (diffX < 0) {
+                    nextDay(); // ปัดซ้าย -> วันถัดไป
+                } else {
+                    prevDay(); // ปัดขวา -> วันก่อนหน้า
+                }
+            }
+        }
+
+        // รองรับการกดลูกศร ซ้าย-ขวา บนคีย์บอร์ดเพื่อเปลี่ยนวัน
+        document.addEventListener('keydown', (e) => {
+            if (document.body.classList.contains('daily-mode')) {
+                if (e.key === 'ArrowRight') nextDay();
+                if (e.key === 'ArrowLeft') prevDay();
+            }
+        });
+
+        // ฟังก์ชันเปิด Modal
+        function openModal(day, period, code, name, teacher, room) {
+            document.getElementById('modalDayBadge').textContent = day;
+            document.getElementById('modalPeriod').textContent = period;
+            document.getElementById('modalCode').textContent = code;
+            document.getElementById('modalName').textContent = name;
+            document.getElementById('modalTeacher').textContent = teacher;
+            document.getElementById('modalRoom').textContent = room;
+
+            const badge = document.getElementById('modalDayBadge');
+            badge.className = 'inline-block px-3 py-1 rounded-full text-xs font-bold mb-1 ';
+            if (day.includes('จันทร์')) badge.className += 'bg-yellow-100 text-yellow-800 border border-yellow-300';
+            else if (day.includes('อังคาร')) badge.className += 'bg-pink-100 text-pink-800 border border-pink-300';
+            else if (day.includes('พุธ')) badge.className += 'bg-green-100 text-green-800 border border-green-300';
+            else if (day.includes('พฤหัสบดี')) badge.className += 'bg-orange-100 text-orange-800 border border-orange-300';
+            else if (day.includes('ศุกร์')) badge.className += 'bg-sky-100 text-sky-800 border border-sky-300';
+
+            const modal = document.getElementById('subjectModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // ฟังก์ชันปิด Modal
+        function closeModal() {
+            const modal = document.getElementById('subjectModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // ฟังก์ชันกรองและไฮไลท์วิชา
+        function filterSchedule(keyword) {
+            const cells = document.querySelectorAll('td.subject-cell');
+            cells.forEach(cell => {
+                cell.classList.remove('dimmed', 'highlighted');
+                if (keyword !== 'all') {
+                    const text = cell.innerText;
+                    if (text.includes(keyword)) {
+                        cell.classList.add('highlighted');
+                    } else {
+                        cell.classList.add('dimmed');
+                    }
+                }
+            });
+            renderDailyCards(currentActiveDay);
+        }
+
+        // ปิด Modal เมื่อกดปุ่ม Esc
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+                closePlanBottomSheet();
+            }
+        });
+
+        // อัปเดตเวลานับถอยหลังในโหมดรายวันแบบเรียลไทม์ทุกวินาที
+        function tickDailyTimer() {
+            if (dailySimulatedMins !== null || !document.body.classList.contains('daily-mode')) return;
+            const timerEl = document.getElementById('activeCountdownTimer');
+            const bannerTimerEl = document.getElementById('bannerCountdown');
+            if (timerEl || bannerTimerEl) {
+                const now = new Date();
+                const curSecs = (now.getHours() * 60 + now.getMinutes()) * 60 + now.getSeconds();
+                let endSecs = 0;
+                if (timerEl) {
+                    endSecs = parseInt(timerEl.getAttribute('data-end-secs'), 10);
+                } else {
+                    const state = computeNowNextState(currentActiveDay);
+                    if (state && state.currentTimeInfo) {
+                        endSecs = state.currentTimeInfo.end * 60;
+                    }
+                }
+                const remaining = endSecs - curSecs;
+                if (remaining <= 0) {
+                    renderDailyCards(currentActiveDay, false);
+                } else {
+                    const remH = String(Math.floor(remaining / 3600)).padStart(2, '0');
+                    const remM = String(Math.floor((remaining % 3600) / 60)).padStart(2, '0');
+                    const remS = String(remaining % 60).padStart(2, '0');
+                    const countdownStr = remaining >= 3600 ? `${remH}:${remM}:${remS}` : `${remM}:${remS}`;
+                    if (timerEl) timerEl.textContent = countdownStr;
+                    if (bannerTimerEl) bannerTimerEl.textContent = countdownStr;
+                }
+            } else {
+                const now = new Date();
+                if (now.getSeconds() === 0) {
+                    renderDailyCards(currentActiveDay, false);
+                }
+            }
+        }
+
+        // เมื่อเริ่มโหลดหน้าเว็บ
+        window.addEventListener('DOMContentLoaded', () => {
+            const dayIndex = new Date().getDay();
+            const dayMap = { 1: "จันทร์", 2: "อังคาร", 3: "พุธ", 4: "พฤหัสบดี", 5: "ศุกร์" };
+            if (dayMap[dayIndex]) {
+                currentActiveDay = dayMap[dayIndex];
+            }
+
+            // โหลดแผนเวลาเรียน (พร้อมระบบ auto-reset เมื่อขึ้นวันใหม่)
+            initBellPlan();
+
+            // ตรวจสอบ query parameter เผื่อต้องการเปิดหน้าตารางรวม (เช่น ?view=table จาก App Shortcut)
+            const urlParams = new URLSearchParams(window.location.search);
+            const simParam = urlParams.get('sim');
+            if (simParam && simParam.length === 4) {
+                const h = parseInt(simParam.slice(0, 2), 10);
+                const m = parseInt(simParam.slice(2, 4), 10);
+                if (!isNaN(h) && !isNaN(m)) dailySimulatedMins = h * 60 + m;
+            }
+
+            const viewParam = urlParams.get('view');
+            if (viewParam === 'table') {
+                switchView('table');
+            } else {
+                // หน้าหลักเริ่มต้นเป็นหน้า Daily Progress Tracker เสมอ
+                switchView('daily');
+            }
+
+            if (!liveTimerInterval) {
+                liveTimerInterval = setInterval(tickDailyTimer, 1000);
+            }
+
+            // ลงทะเบียน Service Worker เพื่อการทำงานแบบออฟไลน์ 100% (PWA)
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => console.log('SW Registered:', reg.scope))
+                    .catch((err) => console.warn('SW Registration failed:', err));
+            }
+        });
+    </script>
+</body>
+</html>

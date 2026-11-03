@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตารางเรียน ม.6/9 - Timeline Progress Tracker Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #fdfbfb 0%, #f3e7e9 50%, #e3eeff 100%);
+      min-height: 100vh;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.03);
+      border-radius: 999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.3);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body class="p-3 sm:p-6 flex flex-col items-center justify-center">
+  <div class="bg-white/95 backdrop-blur-md text-slate-800 border border-slate-200 rounded-3xl p-5 sm:p-7 shadow-xl max-w-xl w-full">
+    
+    <!-- ส่วนหัว: ชื่อและความคืบหน้าภาพรวม -->
+    <div class="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <h2 class="text-slate-900 font-bold text-lg sm:text-xl">Timeline ความคืบหน้าคาบเรียน</h2>
+        </div>
+        <p class="text-slate-500 text-xs sm:text-sm mt-0.5">ห้อง ม.6/9 • ภาคเรียนที่ 2/2569</p>
+      </div>
+
+      <!-- สรุปเปอร์เซ็นต์ -->
+      <div class="text-right shrink-0">
+        <span id="progressPercent" class="text-xs sm:text-sm font-bold px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
+          เรียนแล้ว 2/8 คาบ (25%)
+        </span>
+      </div>
+    </div>
+
+    <!-- แถบจำลองเวลา (Interactive Time Simulation Controller) -->
+    <div class="mt-4 bg-slate-50/80 border border-slate-200/90 rounded-2xl p-3.5">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <span class="text-xs font-bold text-slate-600 flex items-center gap-1.5">
+          ⏱️ จำลองเวลาในห้องเรียน:
+        </span>
+        <span id="currentTimeLabel" class="text-xs font-bold text-indigo-700 bg-white px-2.5 py-0.5 rounded-lg border border-slate-200 shadow-2xs">
+          09:30 น. (คาบ 2)
+        </span>
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        <button onclick="setTime(8, 45, 'คาบ 1 (08:45 น.)')" class="time-btn text-xs px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-semibold transition active:scale-95 text-slate-700">
+          คาบ 1
+        </button>
+        <button onclick="setTime(9, 30, 'คาบ 2 (09:30 น.)')" class="time-btn text-xs px-2.5 py-1.5 rounded-xl bg-indigo-600 text-white font-semibold transition active:scale-95 shadow-2xs">
+          คาบ 2 (กำลังเรียน)
+        </button>
+        <button onclick="setTime(10, 10, 'พัก 20 นาที (10:10 น.)')" class="time-btn text-xs px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-semibold transition active:scale-95 text-slate-700">
+          พักสาย
+        </button>
+        <button onclick="setTime(11, 30, 'คาบ 4 (11:30 น.)')" class="time-btn text-xs px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-semibold transition active:scale-95 text-slate-700">
+          คาบ 4
+        </button>
+        <button onclick="setTime(12, 20, 'พักเที่ยง (12:20 น.)')" class="time-btn text-xs px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-semibold transition active:scale-95 text-slate-700">
+          พักเที่ยง
+        </button>
+        <button onclick="setTime(14, 0, 'คาบ 6 (14:00 น.)')" class="time-btn text-xs px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-semibold transition active:scale-95 text-slate-700">
+          คาบ 6
+        </button>
+        <button onclick="setRealTime()" class="text-xs px-2.5 py-1.5 rounded-xl bg-slate-200/70 hover:bg-slate-300 font-semibold transition active:scale-95 text-slate-700">
+          ⏰ เวลาจริง
+        </button>
+      </div>
+    </div>
+
+    <!-- ส่วนเนื้อหา Timeline Step Indicator (ถอดแบบตามรูปตัวอย่างเป๊ะๆ) -->
+    <div class="mt-5 custom-scroll max-h-[440px] overflow-y-auto pr-1.5" id="timelineContainer">
+      <!-- Render ผ่าน JS -->
+    </div>
+
+    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+      <span>💡 ดีไซน์ถอดแบบตาม Step Indicator Reference</span>
+      <a href="./6_9.html" class="text-indigo-600 hover:underline font-semibold">กลับหน้าตารางหลัก ›</a>
+    </div>
+
+  </div>
+
+  <script>
+    const scheduleItems = [
+      {
+        id: 1,
+        stepNum: 1,
+        title: "ว33103 ชีวะ",
+        period: "คาบที่ 1",
+        timeRange: "08.20 - 09.10 น.",
+        startMins: 8 * 60 + 20,
+        endMins: 9 * 60 + 10,
+        teacher: "ครูนริลญา",
+        room: "ห้องเรียนปกติ",
+        isBreak: false
+      },
+      {
+        id: 2,
+        stepNum: 2,
+        title: "อ33202 ภาษาอังกฤษอ่าน-เขียน",
+        period: "คาบที่ 2",
+        timeRange: "09.10 - 10.00 น.",
+        startMins: 9 * 60 + 10,
+        endMins: 10 * 60 + 0,
+        teacher: "ครูปิยะวัฒน์",
+        room: "ห้องเรียนปกติ",
+        isBreak: false
+      },
+      {
+        id: 3,
+        stepNum: "🧃",
+        title: "พักเบรก 20 นาที",
+        period: "ช่วงพักเช้า",
+        timeRange: "10.00 - 10.20 น.",
+        startMins: 10 * 60 + 0,
+        endMins: 10 * 60 + 20,
+        teacher: "พักผ่อนตามอัธยาศัย",
+        room: "โรงอาหาร / ร้านค้า",
+        isBreak: true
+      },
+      {
+        id: 4,
+        stepNum: 3,
+        title: "ว33286 วิชาคอมพิวเตอร์",
+        period: "คาบที่ 3 - 4 (คาบคู่)",
+        timeRange: "10.20 - 12.00 น.",
+        startMins: 10 * 60 + 20,
+        endMins: 12 * 60 + 0,
+        teacher: "ครูพิมพ์ระวี",
+        room: "📍 ห้องคอม 6",
+        isBreak: false
+      },
+      {
+        id: 5,
+        stepNum: "🍱",
+        title: "พักรับประทานอาหารกลางวัน",
+        period: "พักกลางวัน 50 นาที",
+        timeRange: "12.00 - 12.50 น.",
+        startMins: 12 * 60 + 0,
+        endMins: 12 * 60 + 50,
+        teacher: "พักรับประทานอาหาร",
+        room: "โรงอาหารกลาง",
+        isBreak: true
+      },
+      {
+        id: 6,
+        stepNum: 4,
+        title: "ค33106 คณิตศาสตร์พื้นฐาน",
+        period: "คาบที่ 5",
+        timeRange: "12.50 - 13.40 น.",
+        startMins: 12 * 60 + 50,
+        endMins: 13 * 60 + 40,
+        teacher: "ครูจินตนา",
+        room: "ห้องเรียนปกติ",
+        isBreak: false
+      },
+      {
+        id: 7,
+        stepNum: 5,
+        title: "อ33102 ภาษาอังกฤษพื้นฐาน",
+        period: "คาบที่ 6",
+        timeRange: "13.40 - 14.30 น.",
+        startMins: 13 * 60 + 40,
+        endMins: 14 * 60 + 30,
+        teacher: "ครูรัชนีกร",
+        room: "ห้องเรียนปกติ",
+        isBreak: false
+      },
+      {
+        id: 8,
+        stepNum: 6,
+        title: "ว33102 เคมี",
+        period: "คาบที่ 7",
+        timeRange: "14.30 - 15.20 น.",
+        startMins: 14 * 60 + 30,
+        endMins: 15 * 60 + 20,
+        teacher: "ครูสุธีรา",
+        room: "ห้องเรียนปกติ",
+        isBreak: false
+      },
+      {
+        id: 9,
+        stepNum: 7,
+        title: "อบรมคุณธรรม",
+        period: "คาบที่ 8 (กิจกรรม)",
+        timeRange: "15.20 - 16.10 น.",
+        startMins: 15 * 60 + 20,
+        endMins: 16 * 60 + 10,
+        teacher: "-",
+        room: "ตามกำหนดการโรงเรียน",
+        isBreak: false
+      }
+    ];
+
+    let currentSimMins = 9 * 60 + 30;
+
+    function setTime(hours, mins, label) {
+      currentSimMins = hours * 60 + mins;
+      document.getElementById('currentTimeLabel').textContent = label;
+      
+      document.querySelectorAll('.time-btn').forEach(b => {
+        b.className = "time-btn text-xs px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-semibold transition active:scale-95 text-slate-700";
+      });
+      if (event && event.target) {
+        event.target.className = "time-btn text-xs px-2.5 py-1.5 rounded-xl bg-indigo-600 text-white font-semibold transition active:scale-95 shadow-2xs";
+      }
+      renderTimeline();
+    }
+
+    function setRealTime() {
+      const now = new Date();
+      currentSimMins = now.getHours() * 60 + now.getMinutes();
+      const hStr = String(now.getHours()).padStart(2, '0');
+      const mStr = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('currentTimeLabel').textContent = `${hStr}:${mStr} น. (เวลาจริง)`;
+      renderTimeline();
+    }
+
+    function renderTimeline() {
+      const container = document.getElementById('timelineContainer');
+      container.innerHTML = '';
+
+      let completedCount = 0;
+      const totalPeriods = scheduleItems.filter(i => !i.isBreak).length;
+
+      scheduleItems.forEach((item, index) => {
+        const isLast = index === scheduleItems.length - 1;
+        
+        let status = 'pending';
+        let remainingMinutes = 0;
+
+        if (currentSimMins >= item.endMins) {
+          status = 'completed';
+          if (!item.isBreak) completedCount++;
+        } else if (currentSimMins >= item.startMins && currentSimMins < item.endMins) {
+          status = 'in_progress';
+          remainingMinutes = item.endMins - currentSimMins;
+        } else {
+          status = 'pending';
+        }
+
+        const row = document.createElement('div');
+        row.className = "relative flex items-start gap-3 sm:gap-4 group";
+
+        // เส้นต่อแนวตั้ง
+        let lineHtml = '';
+        if (!isLast) {
+          const lineColor = status === 'completed' ? 'bg-slate-900' : 'bg-slate-200';
+          lineHtml = `<div class="absolute left-4 sm:left-4.5 top-9 bottom-0 w-[2px] ${lineColor} -translate-x-1/2"></div>`;
+        }
+
+        // วงกลมสเต็ป
+        let circleHtml = '';
+        if (status === 'completed') {
+          circleHtml = `
+            <div class="relative z-10 flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-900 text-white shadow-2xs shrink-0 transition-transform group-hover:scale-105">
+              <svg class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+          `;
+        } else if (status === 'in_progress') {
+          circleHtml = `
+            <div class="relative z-10 flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border-2 border-slate-900 text-slate-900 font-bold text-sm shadow-sm shrink-0 ring-4 ring-blue-100">
+              <span>${item.stepNum}</span>
+              <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-600 rounded-full animate-ping"></span>
+            </div>
+          `;
+        } else {
+          circleHtml = `
+            <div class="relative z-10 flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white border-2 border-slate-200 text-slate-400 font-bold text-sm shrink-0">
+              <span>${item.stepNum}</span>
+            </div>
+          `;
+        }
+
+        // ป้ายสถานะ
+        let badgeHtml = '';
+        if (status === 'completed') {
+          badgeHtml = `
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
+              Completed
+            </span>
+          `;
+        } else if (status === 'in_progress') {
+          const remHours = String(Math.floor(remainingMinutes / 60)).padStart(2, '0');
+          const remMins = String(remainingMinutes % 60).padStart(2, '0');
+          const remSecs = '00';
+
+          badgeHtml = `
+            <div class="inline-flex items-center gap-2 flex-wrap">
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-700">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping"></span>
+                In Progress
+              </span>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-indigo-600 text-white shadow-2xs">
+                <span class="text-xs">⏱️</span>
+                <span>${remHours}:${remMins}:${remSecs}</span>
+              </span>
+            </div>
+          `;
+        } else {
+          badgeHtml = `
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-500">
+              Pending
+            </span>
+          `;
+        }
+
+        const textOpacity = status === 'pending' ? 'text-slate-400' : 'text-slate-800';
+
+        const contentHtml = `
+          <div class="flex-1 pb-6 pt-0.5">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <h3 class="font-bold text-sm sm:text-base ${textOpacity} leading-tight">
+                ${item.title}
+              </h3>
+              <span class="text-[11px] font-semibold ${status === 'in_progress' ? 'text-blue-600 font-bold' : 'text-slate-400'}">
+                ${item.period}
+              </span>
+            </div>
+
+            <div class="mt-1 flex items-center gap-2">
+              ${badgeHtml}
+            </div>
+
+            <div class="mt-1.5 flex items-center gap-3 text-xs ${status === 'pending' ? 'text-slate-400' : 'text-slate-500'}">
+              <span class="flex items-center gap-1 font-medium">
+                🕒 ${item.timeRange}
+              </span>
+              ${item.teacher !== '-' ? `<span>• 👨‍🏫 ${item.teacher}</span>` : ''}
+              ${item.room ? `<span>• ${item.room}</span>` : ''}
+            </div>
+          </div>
+        `;
+
+        row.innerHTML = lineHtml + circleHtml + contentHtml;
+        container.appendChild(row);
+      });
+
+      const pct = Math.round((completedCount / totalPeriods) * 100);
+      document.getElementById('progressPercent').textContent = `เรียนแล้ว ${completedCount}/${totalPeriods} คาบ (${pct}%)`;
+    }
+
+    renderTimeline();
+  </script>
+</body>
+</html>
